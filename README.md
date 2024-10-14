@@ -61,7 +61,7 @@ Ví điểm thưởng là cơ chế quản lý các lượng (đơn vị : đi�
 
 Nhóm người dùng gồm: 
 
-a/ Người dùng thông thường chỉ được phép truy xuất thông tin cá nhân của mình. 
+> a/ Người dùng thông thường chỉ được phép truy xuất thông tin cá nhân của mình. 
 
 Được phép điều chỉnh tên, mật khẩu v.v. Hãy căn cứ vào quản lý thông tin tài khoản trên để đưa ra yêu cầu cho phép điều chỉnh, thay đổi trường dữ liệu cụ thể và viết các chức năng cập nhật tương ứng.
 

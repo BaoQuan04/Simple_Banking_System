@@ -1,12 +1,12 @@
 # Simple_Banking_System
 
-Hệ thống đăng nhập và đăng ký tài khoản và quản lý ví điểm thưởng
+## Hệ thống đăng nhập và đăng ký tài khoản và quản lý ví điểm thưởng
  
 
 Dự án Hệ thống đăng nhập và đăng ký chủ yếu liên quan đến quá trình đăng ký người dùng. Thông tin xác thực người dùng như tên người dùng và mật khẩu được yêu cầu từ người dùng. Nếu người dùng đăng ký thành công thì với thông tin xác thực được cung cấp, một bản ghi (có thể là tập tin) của người dùng cụ thể sẽ được tạo trong cơ sở dữ liệu (CSDL).
 Ví điểm thưởng là cơ chế quản lý các lượng (đơn vị : điểm) được dùng để quy đổi ra hàng hóa (còn gọi là hoạt động mua - bán). Giữa các ví có giao dịch chuyển điểm.
  
-A. Các chức năng:
+### A. Các chức năng:
 
 1 - Tạo mới tài khoản khi đăng ký: tạo mới bộ dữ liệu liên quan đến tài khoản người dùng
 
@@ -57,7 +57,7 @@ A. Các chức năng:
 
  
 
-B. Phân chia người dùng và chức năng
+### B. Phân chia người dùng và chức năng
 
 Nhóm người dùng gồm: 
 
@@ -87,7 +87,7 @@ Chú ý: Không được phép thay đổi tên tài khoản đăng nhập.
 
  
 
-C. Quản lý hoạt động ví:
+### C. Quản lý hoạt động ví:
 
 Mỗi người dùng có một bộ dữ liệu về số điểm (ví - wallet) và dữ liệu các giao dịch trao đổi, chuyển điểm từ một ví sang một ví khác.
 

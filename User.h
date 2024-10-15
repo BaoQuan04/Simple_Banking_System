@@ -23,6 +23,8 @@ class User{
 		
 //-----------------Cac ham xu li thong tin cua user----------------------
 	public:
+		//Contructor khoi tao cac gia tri la mot xau rong
+		User();
 		
 		//Ham lay ra cac thong tin cua user
 		string getMaKhachHang();
@@ -43,6 +45,24 @@ class User{
 		void setDiaChi(string);
 		void setEmail(string);
 		
+		
+		
+		//Cac ham chuan hoa thong tin cua user
+		string ChuanHoa_Ten(string);
+		string ChuanHoa_NgaySinh(string);
+		string ChuanHoa_GioiTinh(string);
+		string ChuanHoa_DiaChi(string);
+
+
+
+		//Ham kiem tra input thong tin user 
+		bool Check_NgaySinh(string&);
+		bool Check_GioiTinh(string&);
+		bool Check_Cccd(string&);
+		bool Check_Sdt(string&);
+		bool Check_Email(string&);
+
+
 		//Nhap suat sua thong tin user
 		void NhapThongTin();
 		void XuatThongTin();
@@ -54,4 +74,4 @@ class User{
 };
 
 
-#endif 
+#endif

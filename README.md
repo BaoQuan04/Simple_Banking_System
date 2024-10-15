@@ -1,5 +1,3 @@
-# Simple_Banking_System
-
 # Hệ thống đăng nhập và đăng ký tài khoản và quản lý ví điểm thưởng
  
 Dự án Hệ thống đăng nhập và đăng ký chủ yếu liên quan đến quá trình đăng ký người dùng. Thông tin xác thực người dùng như tên người dùng và mật khẩu được yêu cầu từ người dùng. Nếu người dùng đăng ký thành công thì với thông tin xác thực được cung cấp, một      bản ghi (có thể là tập tin) của người dùng cụ thể sẽ được tạo trong cơ sở dữ liệu (CSDL).

@@ -7,7 +7,7 @@ CREATE TABLE userwithwallet(
     user_id BIGSERIAL NOT NULL PRIMARY KEY,
     uname VARCHAR(50) UNIQUE NOT NULL,
     upassword VARCHAR(50) DEFAULT '1',
-    ubalance INT DEFAULT 5000
+    wallet_id BIGSERIAL NOT NULL
 );
 
 CREATE TABLE totalpoints(
@@ -16,12 +16,19 @@ CREATE TABLE totalpoints(
 	pointout BIGINT;
 );
 
+CREATE TABLE Transactioncode(
+	wallet_id BIGINT NOT NULL REFERENCES userwithwallet(wallet_id),
+	transaction_id BIGSERIAL PRIMARY KEY
+);
+
 CREATE TABLE history(
-    user_id BIGINT NOT NULL REFERENCES userwithwallet(user_id),
-    to_user VARCHAR(50) NOT NULL,
+    transaction_id BIGINT NOT NULL REFERENCES Transacioncode(transaction_id),
+	from_user_wallet BIGINT NOT NULL REFERENCES userwithwallet(wallet_id),
+    to_user_wallet BIGINT NOT NULL REFERENCES userwithwallet(wallet_id),
     points_transferred INT NOT NULL,
     ubalance INT NOT NULL,
-    date_excute timestamp NOT NULL DEFAULT NOW() 
+    date_excute timestamp NOT NULL DEFAULT NOW(),
+	status VARCHAR(50) NOT NULL
 );
 
 SELECT urole FROM users WHERE uname = '' /*check uname exist in SQL*/

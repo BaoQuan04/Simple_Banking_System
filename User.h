@@ -25,6 +25,10 @@ class User{
 	public:
 		//Contructor khoi tao cac gia tri la mot xau rong
 		User();
+
+
+		//Ham tao ma OTP
+		bool CreateOTP();
 		
 		//Ham lay ra cac thong tin cua user
 		string getMaKhachHang();
@@ -67,6 +71,15 @@ class User{
 		void NhapThongTin();
 		void XuatThongTin();
 		void SuaThongTin();
+		void SuaTen();
+		void SuaNgaySinh();
+		void SuaGioiTinh();
+		void SuaCccd();
+		void SuaSdt();
+		void SuaDiaChi();
+		void SuaEmail();
+
+		
 		
 		
 		

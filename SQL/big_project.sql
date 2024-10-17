@@ -1,3 +1,4 @@
+-- create table
 CREATE TABLE accounts(
     uname VARCHAR(50) UNIQUE NOT NULL,
     urole VARCHAR(50) NOT NULL
@@ -8,7 +9,7 @@ CREATE TABLE users(
     uname VARCHAR(50) UNIQUE NOT NULL,
     upassword VARCHAR(50) DEFAULT '1',
     wallet_id BIGSERIAL UNIQUE,
-	balance BIGINT DEFAULT 5000
+	balance BIGINT DEFAULT 5000 
 );
 
 CREATE TABLE totalpoints(
@@ -29,12 +30,13 @@ CREATE TABLE history(
     points_used INT NOT NULL,
     balance_before BIGINT NOT NULL,
 	balance_after BIGINT NOT NULL,
-    date_excute timestamp NOT NULL DEFAULT NOW(),
+    date_excute timestamp NOT NULL DEFAULT NOW()::TIMESTAMP(0), -- local time generate when insert into history 
 	status VARCHAR(50) NOT NULL
 );
 
-SELECT urole FROM users WHERE uname = '' /*check uname exist in SQL*/
-SELECT * FROM userwithwallet LIMIT 5 ORDER BY ASC; /*print 5 roll from beginning of table*/ 
+-- don't know
+SELECT urole FROM users WHERE uname = '' /*check uname exist in SQL when logging*/
+SELECT * FROM users LIMIT 5 ORDER BY ASC; /*print 5 roll from beginning of users table*/ 
 
 
 INSERT INTO users(uname, urole) values ('', ''); /*add user or admin to control in system */
@@ -44,7 +46,40 @@ UPDATE userwithwallet SET ubalance = ubalance - history.points_transeferred WHER
 UPDATE userwithwallet SET ubalance = ubalance + history.points_transeferred WHERE userwithwallet.uname = history.to_user; /* update receiver's balance */
 
 
+-- update pointout for each user created
+UPDATE TABLE totalpoints SET pointout := pointout + 5000;
 
+
+-- check username exist in SQL for logging or transfer
+CREATE OR REPLACE FUNCTION check_user(name VARCHAR(50))
+RETURNS TEXT AS $$
+DECLARE
+    wallet_id INT;
+BEGIN
+    -- query in SQL
+    SELECT u.wallet_id INTO wallet_id
+    FROM users u
+    WHERE u.uname = name;
+    
+    -- check condition
+    IF NOT FOUND THEN
+        RETURN format('Tên hoặc mật khẩu không hợp lệ');
+	ELSE 
+		RETURN ('Chào mừng', wallet_id);
+    END IF;
+
+-- catch exceptions
+EXCEPTION
+        WHEN OTHERS THEN
+            -- Catch any errors and return a failure message
+            RETURN format('Giao dịch bị hủy do lỗi', SQLERRM);
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+-- transfer and catch exceptions
 CREATE OR REPLACE FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT)
 RETURNS TEXT AS $$
 DECLARE
@@ -97,33 +132,41 @@ BEGIN
         IF txn_status = 'Success' THEN
             RETURN format('Giao dịch thành công');
         ELSE
-            RETURN 'Lỗi: Số dư tài khoản A không đủ để thực hiện giao dịch.';
+            RETURN 'Số dư tài khoản của bạn không đủ để thực hiện giao dịch.';
         END IF;
     -- Exception handling block
     EXCEPTION
         WHEN OTHERS THEN
             -- Catch any errors and return a failure message
-            RETURN format('Giao dịch bị hủy do lỗi: %s', SQLERRM);
+            RETURN format('Giao dịch bị hủy do lỗi', SQLERRM);
     END;
 END;
 $$ LANGUAGE plpgsql;
 
 
-SELECT complex_transaction(1 ,2, 50000);
+-- show data in table
 
 SELECT * FROM users;
 SELECT * FROM Transactioncode;
 SELECT * FROM history;
 
+-- delete table
 DROP TABLE users;
 DROP TABLE Transactioncode;
 DROP TABLE history;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
 
+-- clear data in table
 TRUNCATE history;
 TRUNCATE users;
 TRUNCATE Transactioncode;
 
+
+-- test case
 INSERT INTO users (uname, upassword, balance) VALUES ('Quan', '2312121', 5000);
 INSERT INTO users (uname, upassword, balance) VALUES ('Huy', '2312121', 4000);
+SELECT complex_transaction(1 ,2, 50000);
+SELECT complex_transaction(1 ,2, 2000);
+SELECT check_user('Long')
+SELECT check_user('Huy')
 

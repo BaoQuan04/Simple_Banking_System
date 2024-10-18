@@ -8,8 +8,8 @@ using namespace std;
 
 //Luu cac thanh phan cua User
 class User{
-//-----------------Cac thong tin cua user-----------------------------
 	
+//-----------------Cac thong tin cua user-----------------------------
 	private:
 		string MaKhachHang;
 		string Ten;

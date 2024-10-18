@@ -14,8 +14,8 @@ CREATE TABLE users(
 
 CREATE TABLE totalpoints(
 	total BIGINT DEFAULT 50000,
-	pointin BIGINT;
-	pointout BIGINT;
+	pointin BIGINT DEFAULT 0,
+	pointout BIGINT DEFAULT 0
 );
 
 CREATE TABLE Transactioncode(
@@ -47,7 +47,36 @@ UPDATE userwithwallet SET ubalance = ubalance + history.points_transeferred WHER
 
 
 -- update pointout for each user created
-UPDATE TABLE totalpoints SET pointout := pointout + 5000;
+INSERT INTO users(uname, upassword, ) VALUES ();
+UPDATE totalpoints SET pointout = pointout + 5000;
+
+-- check pointout and pointin when closing system
+CREATE OR REPLACE FUNCTION check_total()
+RETURNS TEXT AS $$
+DECLARE
+	total BIGINT;
+	pin BIGINT;
+	pout BIGINT;
+BEGIN
+	SELECT pointin INTO pin FROM totalpoints;
+	SELECT pointout INTO pout FROM totalpoints;
+	IF pin != pout THEN
+		BEGIN
+			SELECT sum(balance) INTO total FROM users;
+			pin := pin + total;
+			UPDATE users SET balance = 0;
+			UPDATE totalpoints SET pointin = pin;
+		END;
+	END IF;
+	
+	RETURN format('Chuong trinh ket thuc');
+	
+EXCEPTION
+   	WHEN OTHERS THEN
+    	-- Catch any errors and return a failure message
+        RETURN format('Giao dịch bị hủy do lỗi', SQLERRM);
+END;
+$$ LANGUAGE plpgsql;
 
 
 -- check username exist in SQL for logging or transfer
@@ -149,11 +178,13 @@ $$ LANGUAGE plpgsql;
 SELECT * FROM users;
 SELECT * FROM Transactioncode;
 SELECT * FROM history;
+SELECT * FROM totalpoints;
 
 -- delete table
 DROP TABLE users;
 DROP TABLE Transactioncode;
 DROP TABLE history;
+DROP TABLE totalpoints;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
 
 -- clear data in table
@@ -164,9 +195,13 @@ TRUNCATE Transactioncode;
 
 -- test case
 INSERT INTO users (uname, upassword, balance) VALUES ('Quan', '2312121', 5000);
+UPDATE totalpoints SET pointout = pointout + 5000;
 INSERT INTO users (uname, upassword, balance) VALUES ('Huy', '2312121', 4000);
+UPDATE totalpoints SET pointout = pointout + 4000;
+INSERT INTO totalpoints(total) VALUES (50000);
 SELECT complex_transaction(1 ,2, 50000);
 SELECT complex_transaction(1 ,2, 2000);
-SELECT check_user('Long')
-SELECT check_user('Huy')
+SELECT check_user('Long');
+SELECT check_user('Huy');
+SELECT check_total();
 

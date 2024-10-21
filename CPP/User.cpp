@@ -154,11 +154,44 @@ string User::ChuanHoa_DiaChi(string a){
 //------------------------Ham kiem tra----------------------------------------
 bool User::Check_NgaySinh(string& a){
 
-    // Định dạng DD/MM/YYYY: Ngày (01-31), Tháng (01-12), Năm (1000-9999)
-    regex datePattern(R"(^((0[1-9])|([12][0-9])|(3[01]))\/((0[1-9])|(1[0-2]))\/(\d{4})$)");
+    string ngay = "", thang = "", nam = "";
+    int n,t,y;
+    stringstream ss(a);
+    getline(ss,ngay,'/');
+    n = stoi(ngay);
+    getline(ss,thang,'/');
+    t = stoi(thang);
+    getline(ss,nam);
+    y = stoi(nam);
 
-    // Kiểm tra xem chuỗi date có khớp với định dạng không
-    return regex_match(a, datePattern);
+
+    if((t == 1)  || (t == 3) || (t == 5) || (t == 7) || (t == 8) || (t == 10) || (t == 12)){
+        if(n < 1 || n > 31){
+            return false;
+        }
+    } 
+    if((t == 4) || (t == 6) || (t == 9) || (t == 11)){
+        if(n < 1 || n > 30){
+            return false;
+        } 
+    }
+
+    bool namnhuan = false ;
+        if(y % 4 == 0 && y % 100 != 0 && y != 0 || y % 400 ==0){
+            namnhuan = true;
+        }
+    if(t == 2 && namnhuan){
+        if(n < 0 || n > 29){
+            return false;
+        }
+    }
+    if(t == 2 && !namnhuan){
+        if(n < 0 || n > 28){
+            return false;
+        }
+    }
+
+    return true;
 }
 bool User::Check_GioiTinh(string& a){
     string res = "";
@@ -202,20 +235,22 @@ bool User::Check_Sdt(string& a){
 bool User::Check_Email(string& a){
     string mail = "@gmail.com";
     if(a.find(mail) == string :: npos){
-        return false;
+         return false;
     }
-
+    
     string res = "", t;
     stringstream ss(a);
-    while(getline(ss,t,'@') ){
-        res = t;
+    getline(ss,t,'@');
+    //update truong hop mail khong co gi
+    if(t == res){
+       return false;
     }
     for(int i = 0; i < t.size(); i++){
         if(t[i] < 'a' && t[i] > 'z'){
             return false;
         }
     }
-    return true;
+        return true;
 }
 
 

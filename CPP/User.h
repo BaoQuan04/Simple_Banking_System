@@ -5,6 +5,11 @@
 #include<string>
 using namespace std;
 
+//Khoi tao chinh sua cac thong tin cua user
+class User;
+
+
+
 
 //Luu cac thanh phan cua User
 class User{
@@ -79,10 +84,6 @@ class User{
 		void SuaDiaChi();
 		void SuaEmail();
 
-		
-		
-		
-		
 		
 };
 

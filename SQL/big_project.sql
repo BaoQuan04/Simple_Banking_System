@@ -301,3 +301,4 @@ SELECT check_user('Long');
 SELECT check_user('Huy');
 SELECT check_total();
 
+

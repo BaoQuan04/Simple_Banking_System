@@ -3,13 +3,19 @@ CREATE TABLE accounts(
     uname VARCHAR(50) UNIQUE NOT NULL,
     urole VARCHAR(50) NOT NULL
 );
+CREATE TABLE admins(
+
+);
 
 CREATE TABLE users(
     user_id BIGSERIAL PRIMARY KEY,
     uname VARCHAR(50) UNIQUE NOT NULL,
     upassword VARCHAR(50) DEFAULT '1',
-    wallet_id BIGSERIAL UNIQUE,
-	balance BIGINT DEFAULT 5000 
+    wallet_id BIGINT REFERENCES wallet(wallet_id)
+	--birth_date,
+	--CCCD BIGINT UNIQUE,
+	--Email VARCHAR(50),
+	--address
 );
 
 CREATE TABLE totalpoints(
@@ -19,14 +25,19 @@ CREATE TABLE totalpoints(
 );
 
 CREATE TABLE Transactioncode(
-	wallet_id BIGINT REFERENCES users(wallet_id),
+	wallet_id BIGINT REFERENCES wallet(wallet_id),
 	transaction_id BIGSERIAL PRIMARY KEY
+);
+
+CREATE TABLE wallet(
+	wallet_id BIGSERIAL PRIMARY KEY,
+	balance BIGINT NOT NULL
 );
 
 CREATE TABLE history(
     transaction_id BIGINT NOT NULL REFERENCES Transactioncode(transaction_id),
-	from_user_wallet BIGINT NOT NULL REFERENCES users(wallet_id),
-    to_user_wallet BIGINT NOT NULL REFERENCES users(wallet_id),
+	from_user_wallet BIGINT NOT NULL REFERENCES wallet(wallet_id),
+    to_user_wallet BIGINT NOT NULL REFERENCES wallet(wallet_id),
     points_used INT NOT NULL,
     balance_before BIGINT NOT NULL,
 	balance_after BIGINT NOT NULL,
@@ -34,7 +45,11 @@ CREATE TABLE history(
 	status VARCHAR(50) NOT NULL
 );
 
--- don't know
+-- modify for best performance
+CREATE INDEX wallet_id_index ON Transacioncode(wallet_id);
+CREATE INDEX transaction_id_index ON history(transaction_id);
+
+-- don't know maybe delete
 SELECT urole FROM users WHERE uname = '' /*check uname exist in SQL when logging*/
 SELECT * FROM users LIMIT 5 ORDER BY ASC; /*print 5 roll from beginning of users table*/ 
 
@@ -50,6 +65,65 @@ UPDATE userwithwallet SET ubalance = ubalance + history.points_transeferred WHER
 INSERT INTO users(uname, upassword, ) VALUES ();
 UPDATE totalpoints SET pointout = pointout + 5000;
 
+
+
+-- update user info
+CREATE OR REPLACE update_uinfo()
+RETURN TEXT AS $$
+BEGIN
+	UPDATE users SET upassword = new_upassword;
+	UPDATE .......
+
+	RETURN 'Cập nhật thành công';
+END;
+EXCEPTION
+    -- Catch any errors and return a failure message
+    WHEN OTHERS THEN
+        RETURN format('Cập nhật thất bại: %s', SQLERRM);
+
+-- show list of user
+
+
+
+
+-- show transfer log
+CREATE OR REPLACE FUNCTION transfer_log(p_wallet_id BIGINT)
+RETURNS TABLE(
+    date_excute TIMESTAMP, 
+    points_used INT, 
+    balance_before BIGINT, 
+    balance_after BIGINT, 
+    status VARCHAR
+) AS $$
+BEGIN
+    -- Start the transaction (implicit in PostgreSQL functions)
+    BEGIN
+        -- The main query that fetches the transaction log
+        RETURN QUERY
+        SELECT 
+            h.date_excute, 
+            h.points_used, 
+            h.balance_before, 
+            h.balance_after, 
+            h.status
+        FROM history h
+        INNER JOIN Transactioncode t ON h.transaction_id = t.transaction_id
+        WHERE t.wallet_id = p_wallet_id
+        ORDER BY h.date_excute DESC;
+
+    EXCEPTION
+        -- Catch any error that occurs
+        WHEN OTHERS THEN
+            -- Handle the error and raise a notice or error message
+            RAISE NOTICE 'Error occurred, transaction rolled back: %', SQLERRM;
+            -- ROLLBACK is implied, so we do not need to explicitly call it
+            RETURN;
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 -- check pointout and pointin when closing system
 CREATE OR REPLACE FUNCTION check_total()
 RETURNS TEXT AS $$
@@ -62,9 +136,9 @@ BEGIN
 	SELECT pointout INTO pout FROM totalpoints;
 	IF pin != pout THEN
 		BEGIN
-			SELECT sum(balance) INTO total FROM users;
+			SELECT sum(balance) INTO total FROM wallet;
 			pin := pin + total;
-			UPDATE users SET balance = 0;
+			UPDATE wallet SET balance = 0;
 			UPDATE totalpoints SET pointin = pin;
 		END;
 	END IF;
@@ -74,37 +148,56 @@ BEGIN
 EXCEPTION
    	WHEN OTHERS THEN
     	-- Catch any errors and return a failure message
-        RETURN format('Giao dịch bị hủy do lỗi', SQLERRM);
+        RETURN format('Đã xảy ra lỗi', SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
+
+
 
 
 -- check username exist in SQL for logging or transfer
 CREATE OR REPLACE FUNCTION check_user(name VARCHAR(50))
-RETURNS TEXT AS $$
-DECLARE
-    wallet_id INT;
+RETURNS TABLE(wallet_id BIGINT) AS $$
 BEGIN
-    -- query in SQL
-    SELECT u.wallet_id INTO wallet_id
+    -- Attempt to find the wallet_id
+    RETURN QUERY
+    SELECT u.wallet_id
     FROM users u
     WHERE u.uname = name;
-    
-    -- check condition
-    IF NOT FOUND THEN
-        RETURN format('Tên hoặc mật khẩu không hợp lệ');
-	ELSE 
-		RETURN ('Chào mừng', wallet_id);
-    END IF;
 
--- catch exceptions
+    -- If no result is found, it will return NULL by default.
+
 EXCEPTION
-        WHEN OTHERS THEN
-            -- Catch any errors and return a failure message
-            RETURN format('Giao dịch bị hủy do lỗi', SQLERRM);
+    WHEN OTHERS THEN
+        -- Catch any errors and return NULL in case of failure
+        RETURN QUERY SELECT NULL;
 END;
 $$ LANGUAGE plpgsql;
 
+
+
+-- create user account
+CREATE OR REPLACE FUNCTION create_user(uname VARCHAR(50), upassword VARCHAR(50) DEFAULT '1', value NUMERIC DEFAULT 5000)
+RETURNS TEXT AS $$
+DECLARE
+    uwallet_id BIGINT;
+BEGIN
+    -- Insert a new wallet with the specified balance
+    INSERT INTO wallet(balance) VALUES(value)
+    RETURNING wallet_id INTO uwallet_id;
+
+    -- Insert a new user with the generated wallet_id
+    INSERT INTO users(uname, upassword, wallet_id) VALUES(uname, upassword, uwallet_id);
+
+    -- Return success message
+    RETURN 'Tạo tài khoản thành công';
+
+EXCEPTION
+    -- Catch any errors and return a failure message
+    WHEN OTHERS THEN
+        RETURN format('Tạo tài khoản thất bại: %s', SQLERRM);
+END;
+$$ LANGUAGE plpgsql;
 
 
 
@@ -121,8 +214,8 @@ BEGIN
     -- Start transaction block
     BEGIN
         -- Get the balances of wallet A and B
-        SELECT balance INTO balance_A FROM users WHERE wallet_id = A;
-        SELECT balance INTO balance_B FROM users WHERE wallet_id = B;
+        SELECT balance INTO balance_A FROM wallet WHERE wallet_id = A;
+        SELECT balance INTO balance_B FROM wallet WHERE wallet_id = B;
 
         -- Always generate a transaction_id regardless of success or failure
         INSERT INTO Transactioncode(wallet_id)
@@ -132,8 +225,8 @@ BEGIN
         -- Check if balance of A is sufficient for the transaction
         IF balance_A >= d THEN
             -- Update the balances for wallet A and B
-            UPDATE users SET balance = balance - d WHERE wallet_id = A;
-            UPDATE users SET balance = balance + d WHERE wallet_id = B;
+            UPDATE wallet SET balance = balance - d WHERE wallet_id = A;
+            UPDATE wallet SET balance = balance + d WHERE wallet_id = B;
 
             -- Mark the transaction as successful
             txn_status := 'Success';
@@ -179,13 +272,16 @@ SELECT * FROM users;
 SELECT * FROM Transactioncode;
 SELECT * FROM history;
 SELECT * FROM totalpoints;
+SELECT * FROM wallet;
 
 -- delete table
 DROP TABLE users;
 DROP TABLE Transactioncode;
 DROP TABLE history;
 DROP TABLE totalpoints;
+DROP TABLE wallet;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
+
 
 -- clear data in table
 TRUNCATE history;
@@ -194,13 +290,13 @@ TRUNCATE Transactioncode;
 
 
 -- test case
-INSERT INTO users (uname, upassword, balance) VALUES ('Quan', '2312121', 5000);
+SELECT create_user('Quan');
 UPDATE totalpoints SET pointout = pointout + 5000;
-INSERT INTO users (uname, upassword, balance) VALUES ('Huy', '2312121', 4000);
-UPDATE totalpoints SET pointout = pointout + 4000;
+SELECT create_user('Huy')
+UPDATE totalpoints SET pointout = pointout + 5000;
 INSERT INTO totalpoints(total) VALUES (50000);
-SELECT complex_transaction(1 ,2, 50000);
-SELECT complex_transaction(1 ,2, 2000);
+SELECT complex_transaction(1, 2, 50000);
+SELECT complex_transaction(1, 2, 2000);
 SELECT check_user('Long');
 SELECT check_user('Huy');
 SELECT check_total();

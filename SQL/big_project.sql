@@ -48,6 +48,8 @@ CREATE TABLE history(
 -- modify for best performance
 CREATE INDEX wallet_id_index ON Transacioncode(wallet_id);
 CREATE INDEX transaction_id_index ON history(transaction_id);
+CREATE INDEX uname_index ON users(uname);
+
 
 -- don't know maybe delete
 SELECT urole FROM users WHERE uname = '' /*check uname exist in SQL when logging*/
@@ -87,40 +89,33 @@ EXCEPTION
 
 
 -- show transfer log
-CREATE OR REPLACE FUNCTION transfer_log(p_wallet_id BIGINT)
+CREATE OR REPLACE FUNCTION transfer_log(p_wallet_id BIGINT, track_number BIGINT)
 RETURNS TABLE(
-    date_excute TIMESTAMP, 
-    points_used INT, 
-    balance_before BIGINT, 
-    balance_after BIGINT, 
-    status VARCHAR
+    "Ngày thực hiện" TIMESTAMP, 
+    "Điểm sử dụng" INT, 
+    "Số dư trước giao dịch" BIGINT, 
+    "Số dư sau giao dịch" BIGINT, 
+    "Trạng thái giao dịch" VARCHAR
 ) AS $$
 BEGIN
-    -- Start the transaction (implicit in PostgreSQL functions)
-    BEGIN
-        -- The main query that fetches the transaction log
-        RETURN QUERY
-        SELECT 
-            h.date_excute, 
-            h.points_used, 
-            h.balance_before, 
-            h.balance_after, 
-            h.status
-        FROM history h
-        INNER JOIN Transactioncode t ON h.transaction_id = t.transaction_id
-        WHERE t.wallet_id = p_wallet_id
-        ORDER BY h.date_excute DESC;
-
-    EXCEPTION
-        -- Catch any error that occurs
-        WHEN OTHERS THEN
-            -- Handle the error and raise a notice or error message
-            RAISE NOTICE 'Error occurred, transaction rolled back: %', SQLERRM;
-            -- ROLLBACK is implied, so we do not need to explicitly call it
-            RETURN;
-    END;
+    RETURN QUERY
+    SELECT 
+        h.date_excute AS "Ngày thực hiện", 
+        h.points_used AS "Điểm sử dụng", 
+        h.balance_before AS "Số dư trước giao dịch", 
+        h.balance_after AS "Số dư sau giao dịch", 
+        h.status AS "Trạng thái giao dịch"
+    FROM history h
+    INNER JOIN Transactioncode t ON h.transaction_id = t.transaction_id
+    WHERE t.wallet_id = p_wallet_id
+	ORDER BY h.date_excute DESC
+	LIMIT 5
+	OFFSET track_number;
 END;
 $$ LANGUAGE plpgsql;
+
+
+
 
 
 
@@ -186,8 +181,9 @@ BEGIN
     INSERT INTO wallet(balance) VALUES(value)
     RETURNING wallet_id INTO uwallet_id;
 
-    -- Insert a new user with the generated wallet_id
+    -- Insert a new user with the generated wallet_id and update pointout
     INSERT INTO users(uname, upassword, wallet_id) VALUES(uname, upassword, uwallet_id);
+	UPDATE totalpoints SET pointout = pointout + 5000;
 
     -- Return success message
     RETURN 'Tạo tài khoản thành công';
@@ -207,9 +203,8 @@ RETURNS TEXT AS $$
 DECLARE
     balance_A BIGINT;
     balance_B BIGINT;
-    balance_A_before BIGINT;
     Tcode_id BIGINT;
-	txn_status VARCHAR(50);
+    txn_status VARCHAR(50);
 BEGIN
     -- Start transaction block
     BEGIN
@@ -235,9 +230,8 @@ BEGIN
             txn_status := 'Failed';
         END IF;
 
-            -- Insert into history table for tracking
-          
-		INSERT INTO history(
+        -- Insert into history table for tracking
+        INSERT INTO history(
             transaction_id, from_user_wallet, to_user_wallet, points_used, balance_before, balance_after, status
         )
         VALUES (
@@ -245,25 +239,27 @@ BEGIN
             A, 
             B, 
             d, 
-            balance_A,            -- Balance before the transaction
+            balance_A,  -- Balance before the transaction
             CASE WHEN txn_status = 'Success' THEN balance_A - d ELSE balance_A END,  -- Balance after transaction or unchanged
             txn_status
         );
 
         -- Return the appropriate message based on success or failure
         IF txn_status = 'Success' THEN
-            RETURN format('Giao dịch thành công');
+            RETURN format('Giao dịch thành công.');
         ELSE
             RETURN 'Số dư tài khoản của bạn không đủ để thực hiện giao dịch.';
         END IF;
+
     -- Exception handling block
     EXCEPTION
         WHEN OTHERS THEN
-            -- Catch any errors and return a failure message
-            RETURN format('Giao dịch bị hủy do lỗi', SQLERRM);
+            -- Rollback and catch any errors and return a failure message
+            RETURN format('Giao dịch bị hủy do lỗi: %s', SQLERRM);
     END;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 -- show data in table
@@ -281,6 +277,8 @@ DROP TABLE history;
 DROP TABLE totalpoints;
 DROP TABLE wallet;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
+DROP FUNCTION check_user(name VARCHAR(50));
+DROP FUNCTION transfer_log(wallet_id BIGINT);
 
 
 -- clear data in table
@@ -299,6 +297,8 @@ SELECT complex_transaction(1, 2, 50000);
 SELECT complex_transaction(1, 2, 2000);
 SELECT check_user('Long');
 SELECT check_user('Huy');
+SELECT * FROM transfer_log(1, 0);
+
 SELECT check_total();
 
 

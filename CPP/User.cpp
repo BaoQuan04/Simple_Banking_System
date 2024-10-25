@@ -7,22 +7,29 @@
 #include<stdlib.h>
 #include<ctime>
 #include<map>
-
+#include<unordered_map>
 using namespace std;
-
+using ull = unsigned long long;
 
 class User;
+class TransactionLog;
+class TotalWallet;
+
 vector<User> account;
 map<string, string> admin;
 
 class User{
     private :
+    //Cac thong tin cua vi:
+        string maDinhDanh;
+        int balance;
+
+    //Thon tin dang nhap cua khach hang
+        string username;
+        string password;
 
     //Cac thong tin cua khach hang
         string ID;
-        long long balance;
-        string username;
-        string password;
         static int num;
 		string Ten;
 		string NgaySinh;
@@ -81,12 +88,66 @@ class User{
 
         //----------------------Quan ly vi diem thuong----------------
 
+        User(string, int);
 
+        string getmaDinhDanh();
+
+        int getBalance();
+
+        void setBalance(int);
+
+        void setmaDinhDanh(string);
 
 };
 
+
+class TransactionLog {
+    public:
+        string transactionid;
+        string fromwallet;
+        string towallet;
+        int point;
+        string status;
+        int balance2;
+
+        TransactionLog(string magd, string vinguon, string vidich, int diem,string trangthai, int sodu2) {
+            this->transactionid = magd;
+            this->fromwallet = vinguon;
+            this->towallet = vidich;
+            this->point = diem;
+            this->status =trangthai;
+            this->balance2 = sodu2;
+        }
+};
+
+class TotalWallet{
+    private:
+        static int Total;
+        unordered_map<string, User> list; //Tu dong them vao voi key "id"
+        vector<TransactionLog> history;
+    public:
+
+    //Them 5 point vao tai khoan moi khoi tao tu vi tong
+        void AddPoint(User&);
+
+    //Them wallet moi tao vao list 
+        void addwallet(User );
+    
+    //Kiem tra xem vi co ton tai hay khong (bang cach check id wallet) 
+        bool Check_Wallet(User);
+
+    //ham chuyen diem
+        bool Chuyen_Diem(User&);
+
+        void Check_Balance(User&);
+    //Lich su giao dich cua vi ca nhan
+        void Check_history(User&);
+};
+
+//===================================================================================
 bool createOTP();
 void createMenu();
+ull getHast(string);
 //============
 void DangKyofUser();
 void DangKyofAdmin();
@@ -108,9 +169,11 @@ void ChucNangAdmin();
 
 //===========================HAM THUOC CLASS==============================
 int User::num = 0;
+int TotalWallet :: Total = 5000;
 
-User::User()  : ID(""), username(""), password(""), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
-User::User(string a, string  b, string c) : ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User()  : maDinhDanh(""), ID(""), username(""), password(""), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string a, string  b, string c) : maDinhDanh(""), ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string ma, int sodu) : maDinhDanh(ma), balance(sodu), ID(""), username(""), password(""), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
 
 string User::getTen(){
     return this->Ten;
@@ -124,8 +187,20 @@ string User::getPassword(){
     return this->password;
 }
 
+string User::getmaDinhDanh(){
+    return this->maDinhDanh;
+}
+
+int User::getBalance(){
+    return this->balance;
+}
+
 void User::setPassword(string a){
     this->password = a;
+}
+
+void User::setBalance(int sodu){
+    this->balance = sodu;
 }
 
 string User::createID(){
@@ -147,7 +222,6 @@ string User::ChuanHoa_Ten(string a){
     return a;
 }
 
-
 string User::ChuanHoa_NgaySinh(string a){
     if(a[2] != '/'){
         a = '0' + a;
@@ -157,7 +231,6 @@ string User::ChuanHoa_NgaySinh(string a){
     }
     return a;
 }
-
 
 string User::ChuanHoa_GioiTinh(string a){
     string res = "";
@@ -184,6 +257,78 @@ string User::ChuanHoa_DiaChi(string a){
     return a;
 }
 
+void TotalWallet::AddPoint(User& a){
+        a.setBalance(5);
+        Total -= 5;
+}
+
+void TotalWallet::addwallet(User a){
+        cout << "Vui long nhap MA DINH DANH de khoi tao vi : ";
+        string Id; cin >> Id;
+        a.setmaDinhDanh(Id);
+        list[a.getmaDinhDanh()] = User(a.getmaDinhDanh(),a.getBalance());
+        cout << "Khoi tao vi thanh cong!\n MA DINH DANH cua ban la: " << Id << endl;
+}
+
+bool TotalWallet::Check_Wallet(User a){
+    return list.find(a.getmaDinhDanh()) != list.end();
+}
+
+bool TotalWallet::Chuyen_Diem(User& a){
+    string v1,v2;
+    
+    cout << "Nhap id cua vi ma ban muon chuyen tien : "; cin >> v2;
+    User& A = list[a.getmaDinhDanh()];
+    User& B = list[v2];
+    if(!Check_Wallet(B)){
+        cout << "Tai khoan dich khong ton tai !" << endl;
+        return false;
+    }
+    if(A.getmaDinhDanh() == v2){
+        cout << "Vi chu va vi dich phai khac nhau !" << endl;
+        return false;
+    }
+
+    int transpoint;
+    cout << "Nhap so tien ban muon chuyen cho vi dich : "; cin >> transpoint;
+    if(transpoint > A.getBalance()){
+        history.push_back(TransactionLog("GD" + to_string(history.size() + 1), A.getmaDinhDanh(), B.getmaDinhDanh(), transpoint,"Giao dich that bai !", A.getBalance()));
+        cout << "So du khong du - Khong the thuc hien giao dich !" << endl;;
+        return false;
+    } else{
+    //Tru diem vi A
+        int viA = A.getBalance();
+        viA -= transpoint;
+        A.setBalance(viA);
+    //Cong diem cho vi B
+        int viB = B.getBalance();
+        viB += transpoint; 
+        B.setBalance(viB);
+        //Ghi lai lich su giao dich tren vi tong
+        history.push_back(TransactionLog("GD" + to_string(history.size()+ 1),A.getmaDinhDanh(),B.getmaDinhDanh(),transpoint,"Giao dich thanh cong !",A.getBalance()));
+        cout << "Giao dich thanh cong ! So du kha dung cua ban la : " << A.getBalance() << endl; 
+        return true;
+    }
+}
+
+void TotalWallet::Check_Balance(User& a){
+    cout << "Vi" << a.getmaDinhDanh() << ". So du kha dung : " << a.getBalance();
+}
+
+void TotalWallet::Check_history(User& a){
+    cout << "-----------Lich Su Giao Dich:-----------\n";
+    vector<TransactionLog>::iterator log;
+    for (log = history.begin(); log != history.end(); log++) {
+        if(a.getmaDinhDanh() == log->fromwallet){
+            cout << "Ma Giao Dich: " << log->transactionid << endl;
+            cout << "Tu vi(A): " << log->fromwallet << " Den Vi(B): " << log->towallet << endl;
+            cout << "So diem: " << log->point << endl;
+            cout << "Trang thai giao dich: "  << log->status << endl;
+            cout << "So du cua vi nguon sau giao dich: " << log->balance2 << endl;
+            cout << "--------------------------------------------\n";
+        }
+    }
+}
 
 //------------------------Ham kiem tra----------------------------------------
 bool User::Check_NgaySinh(string& a){
@@ -227,6 +372,7 @@ bool User::Check_NgaySinh(string& a){
 
     return true;
 }
+
 bool User::Check_GioiTinh(string& a){
     string res = "";
     for(char& x : a){
@@ -237,6 +383,7 @@ bool User::Check_GioiTinh(string& a){
     }
     return false;
 }
+
 bool User::Check_Cccd(string& a){
     if(a.size() != 12){
         return false;
@@ -248,6 +395,7 @@ bool User::Check_Cccd(string& a){
     }
     return true;
 }
+
 bool User::Check_Sdt(string& a){
     //Kiem tra xem so dau co phai la so 0 hay khong
     if(a[0] != '0'){
@@ -266,6 +414,7 @@ bool User::Check_Sdt(string& a){
 
     return true;
 }
+
 bool User::Check_Email(string& a){
     string mail = "@gmail.com";
     if(a.find(mail) == string :: npos){
@@ -286,9 +435,6 @@ bool User::Check_Email(string& a){
     }
         return true;
 }
-
-
-
 
 void User::capnhapThongTin(){
     cout << "CAP NHAP THONG TIN USER !" << endl;
@@ -421,7 +567,6 @@ void User::menuSuaThongTin(){
     }
 }
 
-
 void User::SuaTen(){
     string a;
     cout << "Nhap Ho va Ten (Vi du: Nguyen Van A) :" ;
@@ -435,6 +580,7 @@ void User::SuaTen(){
     else return;
     
 }
+
 void User::SuaNgaySinh(){
     string a;
     cout << "Nhap ngay sinh (Vi du: 01/01/2000) :" ;
@@ -453,6 +599,7 @@ void User::SuaNgaySinh(){
     }
     else return;
 }
+
 void User::SuaGioiTinh(){
     string a;
     cout << "Nhap gioi tinh (Nam hoac Nu) :" ;
@@ -470,6 +617,7 @@ void User::SuaGioiTinh(){
     }
     else return;
 }
+
 void User::SuaCccd(){
     string a;
     cout << "Nhap so Can cuoc cong dan :" ;
@@ -486,6 +634,7 @@ void User::SuaCccd(){
     }
     else return;
 }
+
 void User::SuaSdt(){
     string a;
     cout <<  "Nhap so dien thoai (Vi du: 0123456789):" ;
@@ -502,6 +651,7 @@ void User::SuaSdt(){
     }
     else return;
 }
+
 void User::SuaDiaChi(){
     string a;
     cout << "Nhap dia chi (Vi du: Dong Thap) :" ;
@@ -514,6 +664,7 @@ void User::SuaDiaChi(){
     }
     else return;
 }
+
 void User::SuaEmail(){
     string a;
     cout << "Nhap dia chi email (Vi du: nguyenvana@gmail.com) :" ;
@@ -611,6 +762,7 @@ bool createOTP(){
     return false ;
 }
 
+
 void xemThongTin(string a){
     for(int i = 0 ; i<account.size(); i++){
         if(account[i].getUsername() == a){
@@ -618,6 +770,7 @@ void xemThongTin(string a){
         }
     }
 }
+
 void suaThongTinofUser(string a){
     for(int i = 0 ; i<account.size(); i++){
         if(account[i].getUsername() == a){
@@ -633,11 +786,6 @@ void suaMatKhauofUser(string a){
         }
     }
 }
-
-void quanlyVi(string a){
-    
-}
-
 
 void quanlyKhachHang(){
     cout << "Danh sach khach hang:\n";

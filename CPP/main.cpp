@@ -292,8 +292,6 @@ int DangNhapofAdmin(){
     return 0;
 }
 
-
-
 void ChucNangUser(string a){
     for(int i = 0;i < account.size(); i++){
         if(account[i].getUsername() == a){
@@ -321,6 +319,32 @@ void ChucNangUser(string a){
     }
 }
 
+void quanlyVi(string a){
+    TotalWallet total;
+    int i;
+    for(i=0;i<account.size();i++){
+        if(account[i].getUsername() == a ) break;
+    }
+    if(!total.Check_Wallet(account[i])){
+        total.AddPoint(account[i]);
+        total.addwallet(account[i]);
+    }
+    while(1){
+        cout << "==========Quan ly vi==========\n";
+        cout << "1. Xem so du.\n";
+        cout << "2. Chuyen diem.\n";
+        cout << "3. Xem lich su giao dich.\n";
+        cout << "0. Thoat!\n";
+        cout << "Chon chuc nang: ";
+        int choice;
+        cin >> choice ;
+        if(choice == 1) total.Check_Balance(account[i]);
+        else if(choice == 2) total.Chuyen_Diem(account[i]);
+        else if(choice == 3) total.Check_history(account[i]);
+        else return;
+    }
+}
+
 void ChucNangAdmin(){
 
 	while(1){
@@ -341,8 +365,6 @@ void ChucNangAdmin(){
     }
 
 }
-
-
 
 //===========================================================================================
 

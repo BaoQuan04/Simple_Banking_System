@@ -71,7 +71,6 @@ void DangKyofUser(){
        cin >> password1;
        cout << "Nhap lai mat khau: ";
        cin >> password2;
-       cin.ignore();
        if (password1 != password2) {
            cout << "Mat khau khong khop. Vui long thu lai!" << endl;
            cout << "1. Thu lai.\n";
@@ -175,6 +174,7 @@ void DangKyofAdmin(){
             string res = a.createID();
             account.push_back(User(res, name, "1"));
             cout << "Dang ky thanh cong!. Mat khau sinh tu dong cua ban la: 1\n";
+            return;
         }
     }
 

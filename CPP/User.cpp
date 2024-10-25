@@ -76,6 +76,8 @@ class User{
 		void SuaSdt();
 		void SuaDiaChi();
 		void SuaEmail();
+        void suaMatKhau();
+        void inDanhSach();
 
         //----------------------Quan ly vi diem thuong----------------
 
@@ -529,6 +531,50 @@ void User::SuaEmail(){
     else return;
 }
 
+void User::suaMatKhau(){
+    while(1){
+        cout << "Nhap mat khau cu: ";
+        string lastpass;
+        cin >> lastpass;
+        if(this->password != lastpass){
+            cout << "Mat khau khong chinh xac! Vui long thu lai\n";
+            continue;
+        }
+        else{
+            while(1){
+                string mk1, mk2;
+                cout << "Nhap mat khau moi: ";
+                cin >> mk1;
+                cout << "Nhap lai mat khau: ";
+                cin >> mk2;
+                if(mk1 != mk2 ){
+                    cout << "Mat khau khong khop! Vui long thu lai.\n";
+                    cout << "1. Thu lai.\n";
+                    cout << "0. Thoat!\n";
+                    int chk ;
+                    cin >> chk;
+                    cin.ignore();
+                    if(chk == 0){
+                        cout << "Dang ky khong thanh cong!\n";
+                        return;
+                    }
+                    else continue;
+                }
+                int check =createOTP();
+                if(check == true){
+                    this->password = mk1;
+                    cout << "Thay doi mat khau thanh cong!\n";
+                    return;
+                }
+                else return;
+            }
+        }
+    }
+}
+
+void User::inDanhSach(){
+    cout << this->ID << " " << this->Ten << " " << this->NgaySinh << endl;
+}
 
 //+=================================HAM RIENG==============================
 
@@ -579,15 +625,52 @@ void suaThongTinofUser(string a){
         }
     }
 }
-void quanlyVi(string a){
 
-}
 void suaMatKhauofUser(string a){
+    for(int i = 0 ; i<account.size(); i++){
+        if(account[i].getUsername() == a){
+            account[i].suaMatKhau();
+        }
+    }
+}
 
+void quanlyVi(string a){
+    
 }
 
 
-void quanlyKhachHang(){}
-void suaThongTinofAdmin(){}
+void quanlyKhachHang(){
+    cout << "Danh sach khach hang:\n";
+    for(int i=0; i < account.size();i++){
+        account[i].inDanhSach();
+    }
+    cout << "=====================\n";
+}
+
+void suaThongTinofAdmin(){
+    int cnt=0;
+    while(1){
+        string name, mk;
+        cout << "Dang nhap tai khoan khach hang nguoi dung:\n";
+        cout << "Nhap ten nguoi dung:" ;
+        getline(cin, name);
+        cout << "Nhap mat khau: ";
+        cin >> mk;
+        cin.ignore();
+        for(int i=0;i<account.size();i++){
+            if(account[i].getUsername() == name && account[i].getPassword() == mk){
+                cout << "Dang nhap thanh cong!\n";
+                account[i].menuSuaThongTin();
+            }
+        }
+        cout << "Ten dang nhap hoac mat khau khong dung! Vui long thu lai.\n";
+        cnt++;
+        if(cnt == 3){
+            cout << "Ban da nhap sai qua so lan quy dinh.\n";
+            break;
+        }
+        else cout << "Ten dang nhap hoac mat khau khong dung! Vui long thu lai.\n";
+    }
+}
 
 

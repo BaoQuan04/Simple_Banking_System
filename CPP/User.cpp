@@ -1,4 +1,3 @@
-#include "User.h"
 #include<iostream>
 #include<string>
 #include <algorithm>
@@ -7,98 +6,131 @@
 #include<cstring>
 #include<stdlib.h>
 #include<ctime>
+#include<map>
+
 using namespace std;
 
-//--------Dinh Nghia Cons----------------
-User::User() : Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
 
-//-------Khoi tao ma OTP va tra ve T or F------------
-bool User::CreateOTP(){
-    //Khoi tao seed cho rand() de sinh so ngau nhien thuc su
-    const int nums = 7;
-    srand(time(0)); //Su dung thoi gian hien tai lam seed
-    int cnt =3;
-    while(cnt--){
-        char code[nums], ch ,otp[nums];
-        int n = 0;
-        while(n < nums -1){
-            int res = 0 + (int) (rand() * (127 - 0 + 1.0) / (1.0 + RAND_MAX));
-            ch = (char) res;
-            if( (ch >= '0' && ch <= '9') ){
-                code[n] = ch;
-                n++;
-            }
-        }
-        code[nums] =  '\0';
-        
-        cout << "Ma OTP cua ban la: " << code << endl;
-        cout << "Nhap ma OTP : ";
-        cin >> otp ;
-        int cnt  =0;
-        if(strcmp(otp,code) == 0){
-            cout << "Ma OTP hop le !" << endl;
-            return true;
-        } else {
-            cout << "Ma OTP khong hop le !" << endl;
-        }
-    }
-    cout << "Ban da nhap sai qua so lan quy dinh! Thao tac bi huy.\n";
-    return false ;
-}
+class User;
+vector<User> account;
+map<string, string> admin;
+
+class User{
+    private :
+
+    //Cac thong tin cua khach hang
+        string ID;
+        long long balance;
+        string username;
+        string password;
+        static int num;
+		string Ten;
+		string NgaySinh;
+		string GioiTinh;
+		string Cccd;
+		string Sdt;
+		string DiaChi;
+		string Email;
 
 
-//--------------------Define cac ham get thong tin------------------------------
-string User::getMaKhachHang(){
-    return this->MaKhachHang;
-}
+
+
+
+    public :
+        //bool createOTP();
+
+        User();
+        User(string, string, string);
+            
+        //----------------XU LY DANG KY TAI KHOAN CHO USER------------
+        string createID();
+        //----------------XU LY DANG NHAP CHO USER----------------
+		string getTen();
+		string getUsername();
+		string getPassword();
+        void setPassword(string);
+        //----------------Cac ham chuan hoa-------------------
+        string ChuanHoa_Ten(string);
+		string ChuanHoa_NgaySinh(string);
+		string ChuanHoa_GioiTinh(string);
+		string ChuanHoa_DiaChi(string);
+
+		
+
+		//---------------Ham kiem tra input thong tin user -------------------
+		bool Check_GioiTinh(string&);
+		bool Check_NgaySinh(string&);
+		bool Check_Cccd(string&);
+		bool Check_Sdt(string&);
+		bool Check_Email(string&);
+
+
+		//---------------------Nhap suat sua thong tin user------------------
+		void capnhapThongTin();
+		void xuatThongTin();
+        void menuSuaThongTin();
+		void SuaTen();
+		void SuaNgaySinh();
+		void SuaGioiTinh();
+		void SuaCccd();
+		void SuaSdt();
+		void SuaDiaChi();
+		void SuaEmail();
+
+        //----------------------Quan ly vi diem thuong----------------
+
+
+
+};
+
+bool createOTP();
+void createMenu();
+//============
+void DangKyofUser();
+void DangKyofAdmin();
+string DangNhapofUser();
+int DangNhapofAdmin();
+void createMenuSaiDangNhap();
+//=================
+void ChucNangUser(string);
+void quanlyVi(string);
+void suaThongTinofUser(string);
+void suaMatKhauofUser(string);
+void xemThongTin(string);
+//====================
+void quanlyKhachHang();
+void suaThongTinofAdmin();
+void suaMatKhauofAdmin();
+void ChucNangAdmin();
+
+
+//===========================HAM THUOC CLASS==============================
+int User::num = 0;
+
+User::User()  : ID(""), username(""), password(""), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string a, string  b, string c) : ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+
 string User::getTen(){
     return this->Ten;
 }
-string User::getNgaySinh(){
-    return this->NgaySinh;
-}
-string User::getGioiTinh(){
-    return this->GioiTinh;
-}
-string User::getCccd(){
-    return this->Cccd;
-}
-string User::getSdt(){
-    return this->Sdt;
-}
-string User::getDiaChi(){
-    return this->DiaChi;
-}
-string User::getEmail(){
-    return this->Email;
+
+string User::getUsername(){
+    return this->username;
 }
 
-
-//---------------------Define cac ham set thong tin------------------------------
-void User::setTen(string a){
-    this->Ten = a;
-}
-void User::setNgaySinh(string a){
-    this->NgaySinh = a;
-}
-void User::setGioiTinh(string a){
-    this->GioiTinh = a;
-}
-void User::setCccd(string a){
-    this->Cccd = a;
-}
-void User::setSdt(string a){
-    this->Sdt = a;
-}
-void User::setDiaChi(string a){
-    this->DiaChi = a;
-}
-void User::setEmail(string a){
-    this->Email = a;
+string User::getPassword(){
+    return this->password;
 }
 
+void User::setPassword(string a){
+    this->password = a;
+}
 
-//------------------Ham chuan hoa------------------------------------------
+string User::createID(){
+    num++;
+    return string(3- to_string(num).length(), '0') + to_string(num);
+}
+
 string User::ChuanHoa_Ten(string a){
     string res = "", t;
     stringstream ss(a);
@@ -255,8 +287,8 @@ bool User::Check_Email(string& a){
 
 
 
-//----------------------Cac ham nhap xuat sua thong tin user-------------------
-void User::NhapThongTin(){
+
+void User::capnhapThongTin(){
     cout << "CAP NHAP THONG TIN USER !" << endl;
    
 //----------Nhap Ten-------------
@@ -331,7 +363,7 @@ void User::NhapThongTin(){
         }while(!Check_Email(mail));
     }
     
-    int check = CreateOTP();
+    int check = createOTP();
     if(check == true){
         this->Ten = name;
         this->NgaySinh = birth;
@@ -342,7 +374,49 @@ void User::NhapThongTin(){
         this->Email = mail;
     }
     else return;
+}
 
+void User::xuatThongTin(){
+    cout << "------THONG TIN NGUOI DUNG------\n";
+    cout << "Ho va ten : " << this->Ten << endl;
+    cout << "Ngay sinh : " << this->NgaySinh << endl;
+    cout << "Gioi tinh : " << this->GioiTinh << endl;
+    cout << "So can cuoc cong dan : " << this->Cccd << endl;
+    cout << "So dien thoai : " << this->Sdt << endl;
+    cout << "Dia chi : " << this->DiaChi << endl;
+    cout << "Email : " << this->Email << endl;
+    cout << "---------------------------------\n" ;
+}
+
+void User::menuSuaThongTin(){
+    while(1){
+        cout << "==========Chon thong tin can thay doi=========\n" ;
+        cout << "1. Thay doi toan bo thong tin.\n" ;
+        cout << "2. Thay doi ten.\n";
+        cout << "3. Thay doi ngay sinh.\n";
+        cout << "4. Thay doi gioi tinh.\n";
+        cout << "5. Thay doi so Cccd.\n";
+        cout << "6. Thay doi Sdt.\n";
+        cout << "7. Thay doi dia chi.\n";
+        cout << "8. Thay doi email.\n";
+        cout << "9. Xem thong tin hien tai.\n";
+        cout << "0. Thoat !\n" ;
+        cout << "==============================================\n" ;
+        int a;
+        cout << "Chon chuc nang: " ;
+        cin >> a;
+        cin.ignore();
+        if(a == 1) capnhapThongTin();
+        else if(a == 2) SuaTen();
+        else if(a == 3) SuaNgaySinh();
+        else if(a == 4) SuaGioiTinh();
+        else if(a == 5) SuaCccd();
+        else if(a == 6) SuaSdt();
+        else if(a == 7) SuaDiaChi();
+        else if(a == 8) SuaEmail();
+        else if(a == 9) xuatThongTin();
+        else return;
+    }
 }
 
 
@@ -352,7 +426,7 @@ void User::SuaTen(){
     cin.ignore();
     getline(cin, a);
     a = ChuanHoa_Ten(a);
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->Ten = a;
     }
@@ -371,7 +445,7 @@ void User::SuaNgaySinh(){
             a=ChuanHoa_NgaySinh(a);
         }while(!Check_NgaySinh(a));
     }
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->NgaySinh = a;
     }
@@ -388,7 +462,7 @@ void User::SuaGioiTinh(){
         }while(!Check_GioiTinh(a));
     }
     a = ChuanHoa_GioiTinh(a);
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->GioiTinh = a;
     }
@@ -404,7 +478,7 @@ void User::SuaCccd(){
             cin >> a ;
         }while(!Check_Cccd(a));
     }
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->Cccd = a;
     }
@@ -420,7 +494,7 @@ void User::SuaSdt(){
             cin >> a;
         }while(!Check_Sdt(a));
     }
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->Sdt = a;
     }
@@ -432,7 +506,7 @@ void User::SuaDiaChi(){
     cin.ignore();
     getline(cin , a);
     a = ChuanHoa_DiaChi(a);
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->DiaChi = a;
     }
@@ -448,7 +522,7 @@ void User::SuaEmail(){
             cin >> a;
         }while(!Check_Email(a));
     }
-    int check =CreateOTP();
+    int check =createOTP();
     if(check == true){
         this->Email = a;
     }
@@ -456,55 +530,64 @@ void User::SuaEmail(){
 }
 
 
+//+=================================HAM RIENG==============================
 
-void User::XuatThongTin(){
-    cout << "------THONG TIN NGUOI DUNG------\n";
-    cout << "Ho va ten : " << this->Ten << endl;
-    cout << "Ngay sinh : " << this->NgaySinh << endl;
-    cout << "Gioi tinh : " << this->GioiTinh << endl;
-    cout << "So can cuoc cong dan : " << this->Cccd << endl;
-    cout << "So dien thoai : " << this->Sdt << endl;
-    cout << "Dia chi : " << this->DiaChi << endl;
-    cout << "Email : " << this->Email << endl;
-    cout << "---------------------------------\n" ;
+bool createOTP(){
+    //Khoi tao seed cho rand() de sinh so ngau nhien thuc su
+    const int nums = 7;
+    srand(time(0)); //Su dung thoi gian hien tai lam seed
+    int cnt =3;
+    while(cnt--){
+        char code[nums], ch ,otp[nums];
+        int n = 0;
+        while(n < nums -1){
+            int res = 48 + (int) (rand() * (57 - 48 + 1.0) / (1.0 + RAND_MAX));
+            ch = (char) res;
+            if( (ch >= '0' && ch <= '9') ){
+                code[n] = ch;
+                n++;
+            }
+        }  
+        code[nums -1] = '\0' ;
+        cout << "Ma OTP da duoc gui den tai khoan cua ban! Nhap ma OTP de xac nhan.\n";    
+        cout << "Ma OTP cua ban la: " << code << endl;
+        cout << "Nhap ma OTP : ";
+        cin >> otp ;
+        int cnt  =0;
+        if(strcmp(otp,code) == 0){
+            cout << "Ma OTP hop le !" << endl;
+            return true;
+        } else {
+            cout << "Ma OTP khong hop le !" << endl;
+        }
+    }
+    cout << "Ban da nhap sai qua so lan quy dinh! Thao tac bi huy.\n";
+    return false ;
 }
 
-
-
-void User::SuaThongTin(){
-    while(1){
-        cout << "==========Chon thong tin can thay doi=========\n" ;
-        cout << "1. Thay doi toan bo thong tin.\n" ;
-        cout << "2. Thay doi ten.\n";
-        cout << "3. Thay doi ngay sinh.\n";
-        cout << "4. Thay doi gioi tinh.\n";
-        cout << "5. Thay doi so Cccd.\n";
-        cout << "6. Thay doi Sdt.\n";
-        cout << "7. Thay doi dia chi.\n";
-        cout << "8. Thay doi email.\n";
-        cout << "9. Xem thong tin hien tai.\n";
-        cout << "0. Thoat !\n" ;
-        cout << "==============================================\n" ;
-        int a;
-        cout << "Chon chuc nang: " ;
-        cin >> a;
-        if(a == 1) NhapThongTin();
-        else if(a == 2) SuaTen();
-        else if(a == 3) SuaNgaySinh();
-        else if(a == 4) SuaGioiTinh();
-        else if(a == 5) SuaCccd();
-        else if(a == 6) SuaSdt();
-        else if(a == 7) SuaDiaChi();
-        else if(a == 8) SuaEmail();
-        else if(a == 9) XuatThongTin();
-        else break;
+void xemThongTin(string a){
+    for(int i = 0 ; i<account.size(); i++){
+        if(account[i].getUsername() == a){
+            account[i].xuatThongTin();
+        }
     }
 }
-
-
-
-int main(){
-    User a;
-    a.SuaThongTin();
-	return 0;
+void suaThongTinofUser(string a){
+    for(int i = 0 ; i<account.size(); i++){
+        if(account[i].getUsername() == a){
+            account[i].menuSuaThongTin();
+        }
+    }
 }
+void quanlyVi(string a){
+
+}
+void suaMatKhauofUser(string a){
+
+}
+
+
+void quanlyKhachHang(){}
+void suaThongTinofAdmin(){}
+
+

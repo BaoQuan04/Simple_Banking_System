@@ -18,6 +18,29 @@ class TotalWallet;
 vector<User> account;
 map<string, string> admin;
 
+
+bool createOTP();
+void createMenu();
+ull getHash(string);
+//============
+void DangKyofUser();
+void DangKyofAdmin();
+string DangNhapofUser();
+int DangNhapofAdmin();
+void createMenuSaiDangNhap();
+//=================
+void ChucNangUser(string);
+void quanlyVi(string);
+void suaThongTinofUser(string);
+void suaMatKhauofUser(string);
+void xemThongTin(string);
+//====================
+void quanlyKhachHang();
+void suaThongTinofAdmin();
+void suaMatKhauofAdmin();
+void ChucNangAdmin();
+
+
 class User{
     private :
     //Cac thong tin cua vi:
@@ -201,6 +224,10 @@ void User::setPassword(ull a){
 
 void User::setBalance(int sodu){
     this->balance = sodu;
+}
+
+void User::setmaDinhDanh(string mk){
+	this->maDinhDanh = mk ;
 }
 
 string User::createID(){
@@ -687,7 +714,7 @@ void User::suaMatKhau(){
         cout << "Nhap mat khau cu: ";
         string lastpass;
         cin >> lastpass;
-        ull tmp = getHast(lastpass);
+        ull tmp = getHash(lastpass);
         if(this->password != tmp){
             cout << "Mat khau khong chinh xac! Vui long thu lai\n";
             continue;
@@ -714,7 +741,7 @@ void User::suaMatKhau(){
                 }
                 int check =createOTP();
                 if(check == true){
-                    ull res = getHast(mk1);
+                    ull res = getHash(mk1);
                     this->password = res;
                     cout << "Thay doi mat khau thanh cong!\n";
                     return;
@@ -764,10 +791,10 @@ bool createOTP(){
     return false ;
 }
 
-ull GetHash(string mk){
+ull getHash(string mk){
     ull Value = 0;
     for(int i = 0; i < mk.size(); i++){
-        Value = Value * 6 + (ull) mk[i]; // Dua mat khau ve dang ASCII va luu cho mat khau
+        Value = Value * 6 + (ull) mk[i];
     }
     return Value;
 }
@@ -813,7 +840,7 @@ void suaThongTinofAdmin(){
         getline(cin, name);
         cout << "Nhap mat khau: ";
         cin >> mk;
-        ull res = getHast(mk);
+        ull res = getHash(mk);
         cin.ignore();
         for(int i=0;i<account.size();i++){
             if(account[i].getUsername() == name && account[i].getPassword() == res){
@@ -830,5 +857,4 @@ void suaThongTinofAdmin(){
         else cout << "Ten dang nhap hoac mat khau khong dung! Vui long thu lai.\n";
     }
 }
-
 

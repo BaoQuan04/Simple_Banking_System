@@ -124,7 +124,8 @@ void DangKyofUser(){
        else{
             User a;
             string res = a.createID();
-            account.push_back(User(res, name, password1));
+            ull tmp = getHast(password1);
+            account.push_back(User(res, name, tmp));
             cout << "Dang ky thanh cong!\n";
        }
    }
@@ -172,7 +173,8 @@ void DangKyofAdmin(){
         else {
             User a;
             string res = a.createID();
-            account.push_back(User(res, name, "1"));
+            ull tmp = getHast("1");
+            account.push_back(User(res, name, tmp));
             cout << "Dang ky thanh cong!. Mat khau sinh tu dong cua ban la: 1\n";
             return;
         }
@@ -223,7 +225,8 @@ void createMenuSaiDangNhap(){
                             else continue;
                         }
                         else{
-                            account[i].setPassword(mk1);
+                            ull res = getHast(mk1);
+                            account[i].setPassword(res);
                             cout << "Thay doi mat khau thanh cong!\n";
                         }
                     }
@@ -247,7 +250,8 @@ string DangNhapofUser(){
         cin >> mk;
         cin.ignore();
         for(int i=0;i<account.size();i++){
-            if(account[i].getUsername() == name && account[i].getPassword() == mk){
+            ull tmp = getHast(mk);
+            if(account[i].getUsername() == name && account[i].getPassword() == tmp){
                 cout << "Dang nhap thanh cong!\n";
                 return account[i].getUsername();
             }

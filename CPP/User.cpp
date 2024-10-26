@@ -26,7 +26,7 @@ class User{
 
     //Thon tin dang nhap cua khach hang
         string username;
-        string password;
+        ull password;
 
     //Cac thong tin cua khach hang
         string ID;
@@ -47,15 +47,15 @@ class User{
         //bool createOTP();
 
         User();
-        User(string, string, string);
+        User(string, string, ull);
             
         //----------------XU LY DANG KY TAI KHOAN CHO USER------------
         string createID();
         //----------------XU LY DANG NHAP CHO USER----------------
 		string getTen();
 		string getUsername();
-		string getPassword();
-        void setPassword(string);
+		ull getPassword();
+        void setPassword(ull);
         //----------------Cac ham chuan hoa-------------------
         string ChuanHoa_Ten(string);
 		string ChuanHoa_NgaySinh(string);
@@ -171,9 +171,9 @@ void ChucNangAdmin();
 int User::num = 0;
 int TotalWallet :: Total = 5000;
 
-User::User()  : maDinhDanh(""), ID(""), username(""), password(""), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
-User::User(string a, string  b, string c) : maDinhDanh(""), ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
-User::User(string ma, int sodu) : maDinhDanh(ma), balance(sodu), ID(""), username(""), password(""), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User()  : maDinhDanh(""), ID(""), username(""), password(), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string a, string  b, ull c) : maDinhDanh(""), ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string ma, int sodu) : maDinhDanh(ma), balance(sodu), ID(""), username(""), password(), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
 
 string User::getTen(){
     return this->Ten;
@@ -183,7 +183,7 @@ string User::getUsername(){
     return this->username;
 }
 
-string User::getPassword(){
+ull User::getPassword(){
     return this->password;
 }
 
@@ -195,7 +195,7 @@ int User::getBalance(){
     return this->balance;
 }
 
-void User::setPassword(string a){
+void User::setPassword(ull a){
     this->password = a;
 }
 
@@ -687,7 +687,8 @@ void User::suaMatKhau(){
         cout << "Nhap mat khau cu: ";
         string lastpass;
         cin >> lastpass;
-        if(this->password != lastpass){
+        ull tmp = getHast(lastpass);
+        if(this->password != tmp){
             cout << "Mat khau khong chinh xac! Vui long thu lai\n";
             continue;
         }
@@ -713,7 +714,8 @@ void User::suaMatKhau(){
                 }
                 int check =createOTP();
                 if(check == true){
-                    this->password = mk1;
+                    ull res = getHast(mk1);
+                    this->password = res;
                     cout << "Thay doi mat khau thanh cong!\n";
                     return;
                 }
@@ -762,6 +764,13 @@ bool createOTP(){
     return false ;
 }
 
+ull GetHash(string mk){
+    ull Value = 0;
+    for(int i = 0; i < mk.size(); i++){
+        Value = Value * 6 + (ull) mk[i]; // Dua mat khau ve dang ASCII va luu cho mat khau
+    }
+    return Value;
+}
 
 void xemThongTin(string a){
     for(int i = 0 ; i<account.size(); i++){
@@ -804,9 +813,10 @@ void suaThongTinofAdmin(){
         getline(cin, name);
         cout << "Nhap mat khau: ";
         cin >> mk;
+        ull res = getHast(mk);
         cin.ignore();
         for(int i=0;i<account.size();i++){
-            if(account[i].getUsername() == name && account[i].getPassword() == mk){
+            if(account[i].getUsername() == name && account[i].getPassword() == res){
                 cout << "Dang nhap thanh cong!\n";
                 account[i].menuSuaThongTin();
             }

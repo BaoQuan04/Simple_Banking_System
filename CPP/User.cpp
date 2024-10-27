@@ -11,14 +11,16 @@
 using namespace std;
 using ull = unsigned long long;
 
+//========Khai bao cac class=====
 class User;
 class TransactionLog;
 class TotalWallet;
 
+//========Khai bao cac container luu tru========
 vector<User> account;
 map<string, string> admin;
 
-
+//===========Khai bao cac ham chuc nang============
 bool createOTP();
 void createMenu();
 ull getHash(string);
@@ -41,6 +43,8 @@ void suaMatKhauofAdmin();
 void ChucNangAdmin();
 
 
+void xemdanhsach();
+//===========Khai bao=============================================
 class User{
     private :
     //Cac thong tin cua vi:
@@ -67,6 +71,7 @@ class User{
 
 
     public :
+
         //bool createOTP();
 
         User();
@@ -121,6 +126,8 @@ class User{
 
         void setmaDinhDanh(string);
 
+        void xemallthongtin();
+
 };
 
 
@@ -167,36 +174,15 @@ class TotalWallet{
         void Check_history(User&);
 };
 
-//===================================================================================
-bool createOTP();
-void createMenu();
-ull getHast(string);
-//============
-void DangKyofUser();
-void DangKyofAdmin();
-string DangNhapofUser();
-int DangNhapofAdmin();
-void createMenuSaiDangNhap();
-//=================
-void ChucNangUser(string);
-void quanlyVi(string);
-void suaThongTinofUser(string);
-void suaMatKhauofUser(string);
-void xemThongTin(string);
-//====================
-void quanlyKhachHang();
-void suaThongTinofAdmin();
-void suaMatKhauofAdmin();
-void ChucNangAdmin();
 
 
 //===========================HAM THUOC CLASS==============================
 int User::num = 0;
 int TotalWallet :: Total = 5000;
 
-User::User()  : maDinhDanh(""), ID(""), username(""), password(), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
-User::User(string a, string  b, ull c) : maDinhDanh(""), ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
-User::User(string ma, int sodu) : maDinhDanh(ma), balance(sodu), ID(""), username(""), password(), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User()  : maDinhDanh(""), balance(0), ID(""), username(""), password(), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string a, string  b, ull c) : maDinhDanh(""), balance(0), ID(a), username(b), password(c), Ten(""), NgaySinh(""), GioiTinh(""), Cccd(""), Sdt(""), DiaChi("") {}
+User::User(string ma, int sodu) : maDinhDanh(ma), balance(sodu) {}
 
 string User::getTen(){
     return this->Ten;
@@ -294,17 +280,19 @@ void TotalWallet::addwallet(User a){
         string Id; cin >> Id;
         a.setmaDinhDanh(Id);
         list[a.getmaDinhDanh()] = User(a.getmaDinhDanh(),a.getBalance());
-        cout << "Khoi tao vi thanh cong!\n MA DINH DANH cua ban la: " << Id << endl;
+        cout << "Khoi tao vi thanh cong!\nMA DINH DANH cua ban la: " << Id << endl;
 }
 
 bool TotalWallet::Check_Wallet(User a){
-    return list.find(a.getmaDinhDanh()) != list.end();
+    if (list.find(a.getmaDinhDanh()) != list.end()) return true;
+    else return false ;
 }
 
 bool TotalWallet::Chuyen_Diem(User& a){
     string v1,v2;
     
-    cout << "Nhap id cua vi ma ban muon chuyen tien : "; cin >> v2;
+    cout << "Nhap id cua vi ma ban muon chuyen tien : ";
+     cin >> v2;
     User& A = list[a.getmaDinhDanh()];
     User& B = list[v2];
     if(!Check_Wallet(B)){
@@ -320,7 +308,7 @@ bool TotalWallet::Chuyen_Diem(User& a){
     cout << "Nhap so tien ban muon chuyen cho vi dich : "; cin >> transpoint;
     if(transpoint > A.getBalance()){
         history.push_back(TransactionLog("GD" + to_string(history.size() + 1), A.getmaDinhDanh(), B.getmaDinhDanh(), transpoint,"Giao dich that bai !", A.getBalance()));
-        cout << "So du khong du - Khong the thuc hien giao dich !" << endl;;
+        cout << "So du khong du - Khong the thuc hien giao dich !" << endl;
         return false;
     } else{
     //Tru diem vi A
@@ -339,7 +327,7 @@ bool TotalWallet::Chuyen_Diem(User& a){
 }
 
 void TotalWallet::Check_Balance(User& a){
-    cout << "Vi" << a.getmaDinhDanh() << ". So du kha dung : " << a.getBalance();
+    cout << "Vi" << a.getmaDinhDanh() << ". So du kha dung : " << a.getBalance() << endl;
 }
 
 void TotalWallet::Check_history(User& a){
@@ -352,9 +340,9 @@ void TotalWallet::Check_history(User& a){
             cout << "So diem: " << log->point << endl;
             cout << "Trang thai giao dich: "  << log->status << endl;
             cout << "So du cua vi nguon sau giao dich: " << log->balance2 << endl;
-            cout << "--------------------------------------------\n";
         }
     }
+    cout << "--------------------------------------------\n";
 }
 
 //------------------------Ham kiem tra----------------------------------------
@@ -396,7 +384,6 @@ bool User::Check_NgaySinh(string& a){
             return false;
         }
     }
-
     return true;
 }
 
@@ -469,7 +456,6 @@ void User::capnhapThongTin(){
 //----------Nhap Ten-------------
     string name;
     cout << "Nhap Ho va Ten (Vi du: Nguyen Van A) :" ;
-    cin.ignore();
     getline(cin, name);
     name = ChuanHoa_Ten(name);
 
@@ -581,7 +567,10 @@ void User::menuSuaThongTin(){
         cout << "Chon chuc nang: " ;
         cin >> a;
         cin.ignore();
-        if(a == 1) capnhapThongTin();
+        if(a == 1){
+            capnhapThongTin();
+            cout << "Thay doi thong tin thanh cong.\n";
+        }
         else if(a == 2) SuaTen();
         else if(a == 3) SuaNgaySinh();
         else if(a == 4) SuaGioiTinh();
@@ -597,12 +586,12 @@ void User::menuSuaThongTin(){
 void User::SuaTen(){
     string a;
     cout << "Nhap Ho va Ten (Vi du: Nguyen Van A) :" ;
-    cin.ignore();
     getline(cin, a);
     a = ChuanHoa_Ten(a);
     int check =createOTP();
     if(check == true){
         this->Ten = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
     
@@ -623,6 +612,7 @@ void User::SuaNgaySinh(){
     int check =createOTP();
     if(check == true){
         this->NgaySinh = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
 }
@@ -641,6 +631,7 @@ void User::SuaGioiTinh(){
     int check =createOTP();
     if(check == true){
         this->GioiTinh = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
 }
@@ -658,6 +649,7 @@ void User::SuaCccd(){
     int check =createOTP();
     if(check == true){
         this->Cccd = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
 }
@@ -675,6 +667,7 @@ void User::SuaSdt(){
     int check =createOTP();
     if(check == true){
         this->Sdt = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
 }
@@ -688,6 +681,7 @@ void User::SuaDiaChi(){
     int check =createOTP();
     if(check == true){
         this->DiaChi = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
 }
@@ -705,6 +699,7 @@ void User::SuaEmail(){
     int check =createOTP();
     if(check == true){
         this->Email = a;
+        cout << "Thay doi thong tin thanh cong.\n";
     }
     else return;
 }
@@ -754,6 +749,10 @@ void User::suaMatKhau(){
 
 void User::inDanhSach(){
     cout << this->ID << " " << this->Ten << " " << this->NgaySinh << endl;
+}
+
+void User::xemallthongtin(){
+    cout << this->maDinhDanh << " " << this->balance << " " << this->ID << " " << this->username << " " << this->password << " " << this->Ten << " " << this->NgaySinh<<" " << this->GioiTinh << " " << this->Cccd << " " << this->Sdt << " " << this->DiaChi <<" " << this->Email << endl;
 }
 
 //+=================================HAM RIENG==============================
@@ -813,6 +812,16 @@ void suaThongTinofUser(string a){
             account[i].menuSuaThongTin();
         }
     }
+}
+
+
+
+void xemdanhsach(){
+    cout << "======ACCOUMT=====\n";
+    for(auto x : account){
+        x.xemallthongtin();      
+    }
+    cout << "==================\n";
 }
 
 void suaMatKhauofUser(string a){

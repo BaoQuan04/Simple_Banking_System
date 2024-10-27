@@ -18,6 +18,7 @@ void createMenu(){
         cout << "HE THONG DANG KY VA DANG NHAP TAI KHOAN VA QUAN LI DIEM THUONG\n" ;
         cout << "1. Dang ky.\n";
         cout << "2. Dang nhap.\n";
+        cout << "3. Xem thong tin list.\n";
         cout << "0. Thoat!\n";
         cout << "Chon chuc nang: ";
         int choice;
@@ -30,8 +31,8 @@ void createMenu(){
             while(1){
                 cout << "Chon doi tuong dang nhap :\n";
                 cout << "1. USER.\n";
-                cout << "2. ADMIN.\n ";
-                cout << "3. Quay lai!\n";
+                cout << "2. ADMIN.\n";
+                cout << "0. Quay lai!\n";
                 int c;
                 cout << "Chon doi tuong: ";
                 cin >> c;
@@ -52,17 +53,19 @@ void createMenu(){
                         break;
                     }
                 }
-                else if(c == 3) break;
+                else if(c == 0) break;
             }
 
         }
+        else if(choice ==3 ) xemdanhsach();
         else if(choice == 0) return ;
     }
 }
 
 void DangKyofUser(){
    
-   while(1){
+    while(1){
+        cout << "=========DANG KY TAI KHOAN==========\n";
        cout << "Nhap ten dang nhap: " ;
        string name;
        getline(cin , name);
@@ -71,6 +74,7 @@ void DangKyofUser(){
        cin >> password1;
        cout << "Nhap lai mat khau: ";
        cin >> password2;
+       cin.ignore();
        if (password1 != password2) {
            cout << "Mat khau khong khop. Vui long thu lai!" << endl;
            cout << "1. Thu lai.\n";
@@ -121,14 +125,15 @@ void DangKyofUser(){
                cout << "Lua chon khong hop le!" << endl;
            }
        }
-       else{
+        else{
             User a;
             string res = a.createID();
             ull tmp = getHash(password1);
             account.push_back(User(res, name, tmp));
             cout << "Dang ky thanh cong!\n";
-       }
-   }
+            return;
+        }
+    }
 
 }
 
@@ -242,6 +247,7 @@ void createMenuSaiDangNhap(){
 string DangNhapofUser(){
     //User a;
     int cnt=0;
+	string fail = "";
     while(1){
         string name, mk;
         cout << "Nhap ten nguoi dung:" ;
@@ -256,17 +262,26 @@ string DangNhapofUser(){
                 return account[i].getUsername();
             }
         }
-        cout << "Ten dang nhap hoac mat khau khong dung! Vui long thu lai.\n";
-        cnt++;
+    	cout << "Ten dang nhap hoac mat khau khong dung!\n";
+    	cnt++;
+    	cout << "1. Thu lai.\n";
+    	cout << "0. Thoat!\n";
+    	int choice ;
+    	cout << "Chon chuc nang: ";
+    	cin >> choice;
+    	cin.ignore();  
+    	if(choice == 1) continue;
+    	else{
+    		cout << "Dang nhap khong thanh cong!\n";
+    		return fail;
+		}
         if(cnt == 3){
             cout << "Ban da nhap sai qua so lan quy dinh.\n";
             break;
         }
-        else cout << "Ten dang nhap hoac mat khau khong dung! Vui long thu lai.\n";
     }
     createMenuSaiDangNhap();
-    string  sai = "";
-    return sai;
+    return fail;
 }
 
 int DangNhapofAdmin(){
@@ -299,7 +314,10 @@ int DangNhapofAdmin(){
 void ChucNangUser(string a){
     for(int i = 0;i < account.size(); i++){
         if(account[i].getUsername() == a){
-            if(account[i].getTen() == "") account[i].capnhapThongTin();
+            if(account[i].getTen() == ""){
+                account[i].capnhapThongTin();
+                cout << "Cap nhap thong tin thanh cong.\n";
+            }  
         }
     }
     
@@ -307,7 +325,7 @@ void ChucNangUser(string a){
         cout << "=============USER=============\n";
         cout << "Cac chuc nang:\n";
         cout << "1. Xem thong tin.\n";
-        cout << "2. Thay doi thong tin";
+        cout << "2. Thay doi thong tin.\n";
         cout << "3. Sua mat khau.\n";
         cout << "4. Quan ly vi diem thuong.\n";
         cout << "0. Thoat!\n";

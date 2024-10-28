@@ -68,6 +68,28 @@ INSERT INTO users(uname, upassword, ) VALUES ();
 UPDATE totalpoints SET pointout = pointout + 5000;
 
 
+--check log in
+CREATE OR REPLACE FUNCTION login(name_input VARCHAR(50))
+RETURNS TABLE(name VARCHAR(50), upassword VARCHAR(50), wallet_id BIGINT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    -- Kiểm tra xem có bản ghi nào khớp với name_input không
+    IF NOT EXISTS (
+        SELECT 1
+        FROM users AS u
+        WHERE u.uname = name_input
+    ) THEN
+        -- Nếu không có bản ghi nào khớp, trả về NULL cho tất cả các cột
+        RETURN QUERY SELECT NULL::VARCHAR, NULL::VARCHAR, NULL::BIGINT;
+    ELSE
+        -- Nếu tìm thấy bản ghi, trả về kết quả từ bảng
+        RETURN QUERY
+        SELECT u.uname, u.upassword, u.wallet_id
+        FROM users AS u
+        WHERE u.uname = name_input;
+    END IF;
+END;
+$$;
 
 -- update user info
 CREATE OR REPLACE update_uinfo()
@@ -298,7 +320,7 @@ SELECT complex_transaction(1, 2, 2000);
 SELECT check_user('Long');
 SELECT check_user('Huy');
 SELECT * FROM transfer_log(1, 0);
-
+SELECT * FROM login('Huy');
 SELECT check_total();
 
 

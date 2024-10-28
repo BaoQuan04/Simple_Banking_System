@@ -186,23 +186,22 @@ $$ LANGUAGE plpgsql;
 
 
 -- check username exist in SQL for logging or transfer
-CREATE OR REPLACE FUNCTION check_user(name VARCHAR(50))
-RETURNS TABLE(wallet_id BIGINT) AS $$
+CREATE OR REPLACE FUNCTION check_user(name_input VARCHAR(50))
+RETURNS TABLE(name VARCHAR(50), wallet_id BIGINT) AS $$
 BEGIN
-    -- Attempt to find the wallet_id
+    -- Thử tìm tên và wallet_id của người dùng
     RETURN QUERY
-    SELECT u.wallet_id
+    SELECT u.uname, u.wallet_id
     FROM users u
-    WHERE u.uname = name;
+    WHERE u.uname = name_input;
 
-    -- If no result is found, it will return NULL by default.
-
-EXCEPTION
-    WHEN OTHERS THEN
-        -- Catch any errors and return NULL in case of failure
-        RETURN QUERY SELECT NULL;
+    -- Nếu không tìm thấy, trả về mặc định '0' và 0
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT '0'::VARCHAR, 0::BIGINT;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 
@@ -336,8 +335,8 @@ UPDATE totalpoints SET pointout = pointout + 5000;
 INSERT INTO totalpoints(total) VALUES (50000);
 SELECT complex_transaction(1, 2, 50000);
 SELECT complex_transaction(1, 2, 2000);
-SELECT check_user('Long');
-SELECT check_user('Huy');
+SELECT * FROM check_user('Long');
+SELECT * FROM check_user('Huy');
 SELECT * FROM transfer_log(1, 0);
 SELECT * FROM login('Long');
 SELECT * FROM login('1');

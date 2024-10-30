@@ -26,7 +26,8 @@ CREATE TABLE totalpoints(
 );
 
 CREATE TABLE Transactioncode(
-	wallet_id BIGINT REFERENCES wallet(wallet_id),
+	from_wallet_id BIGINT REFERENCES wallet(wallet_id),
+	to_wallet_id BIGINT REFERENCES wallet(wallet_id),
 	transaction_id BIGSERIAL PRIMARY KEY
 );
 
@@ -40,8 +41,10 @@ CREATE TABLE history(
 	from_user_wallet BIGINT NOT NULL REFERENCES wallet(wallet_id),
     to_user_wallet BIGINT NOT NULL REFERENCES wallet(wallet_id),
     points_used INT NOT NULL,
-    balance_before BIGINT NOT NULL,
-	balance_after BIGINT NOT NULL,
+    A_balance_before BIGINT NOT NULL,
+	A_balance_after BIGINT NOT NULL,
+	B_balance_before BIGINT NOT NULL,
+	B_balance_after BIGINT NOT NULL,
     date_excute timestamp NOT NULL DEFAULT NOW()::TIMESTAMP(0), -- local time generate when insert into history 
 	status VARCHAR(50) NOT NULL
 );
@@ -126,28 +129,48 @@ EXCEPTION
 -- show transfer log
 CREATE OR REPLACE FUNCTION transfer_log(p_wallet_id BIGINT, track_number BIGINT)
 RETURNS TABLE(
-    "Ngày thực hiện" TIMESTAMP, 
-    "Điểm sử dụng" INT, 
-    "Số dư trước giao dịch" BIGINT, 
-    "Số dư sau giao dịch" BIGINT, 
-    "Trạng thái giao dịch" VARCHAR
+    "Ngay thuc hien" TIMESTAMP,
+    "Noi dung" TEXT,
+    "Diem su dung" INT, 
+    "So du truoc giao dich" BIGINT, 
+    "So du sau giao dich" BIGINT,
+    "Trang thai giao dich" TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
     SELECT 
-        h.date_excute AS "Ngày thực hiện", 
-        h.points_used AS "Điểm sử dụng", 
-        h.balance_before AS "Số dư trước giao dịch", 
-        h.balance_after AS "Số dư sau giao dịch", 
-        h.status AS "Trạng thái giao dịch"
+        h.date_excute AS "Ngay thuc hien",
+        
+        -- Xác định nội dung dựa trên cột `from_user_wallet` hoặc `to_user_wallet`
+        CASE 
+            WHEN h.from_user_wallet = p_wallet_id THEN 'Chuyen diem den ' || h.to_user_wallet
+            ELSE 'Nhan diem tu ' || h.from_user_wallet
+        END AS "Noi dung",
+        
+        h.points_used AS "Diem su dung",
+        
+        -- Xác định "So du truoc giao dich" dựa trên nội dung
+        CASE 
+            WHEN h.from_user_wallet = p_wallet_id THEN h.A_balance_before
+            ELSE h.B_balance_before
+        END AS "So du truoc giao dich",
+        
+        -- Xác định "So du sau giao dich" dựa trên nội dung
+        CASE 
+            WHEN h.from_user_wallet = p_wallet_id THEN h.A_balance_after
+            ELSE h.B_balance_after
+        END AS "So du sau giao dich",
+        
+        h.status::TEXT AS "Trang thai giao dich"
     FROM history h
     INNER JOIN Transactioncode t ON h.transaction_id = t.transaction_id
-    WHERE t.wallet_id = p_wallet_id
-	ORDER BY h.date_excute DESC
-	LIMIT 5
-	OFFSET track_number;
+    WHERE t.from_wallet_id = p_wallet_id or t.to_wallet_id = p_wallet_id
+    ORDER BY h.date_excute DESC
+    LIMIT 5
+    OFFSET track_number;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 
@@ -240,59 +263,64 @@ DECLARE
     Tcode_id BIGINT;
     txn_status VARCHAR(50);
 BEGIN
-    -- Start transaction block
+    -- Bắt đầu một giao dịch lớn
     BEGIN
-        -- Get the balances of wallet A and B
+        -- Lấy số dư ví của A và B
         SELECT balance INTO balance_A FROM wallet WHERE wallet_id = A;
         SELECT balance INTO balance_B FROM wallet WHERE wallet_id = B;
 
-        -- Always generate a transaction_id regardless of success or failure
-        INSERT INTO Transactioncode(wallet_id)
-        VALUES (A)
+        -- Tạo transaction_id cho dù giao dịch thành công hay thất bại
+        INSERT INTO Transactioncode(from_wallet_id, to_wallet_id)
+        VALUES (A, B)
         RETURNING transaction_id INTO Tcode_id;
 
-        -- Check if balance of A is sufficient for the transaction
+        -- Kiểm tra nếu số dư của A đủ cho giao dịch
         IF balance_A >= d THEN
-            -- Update the balances for wallet A and B
+            -- Cập nhật số dư cho ví A và B
             UPDATE wallet SET balance = balance - d WHERE wallet_id = A;
             UPDATE wallet SET balance = balance + d WHERE wallet_id = B;
 
-            -- Mark the transaction as successful
+            -- Đánh dấu giao dịch thành công
             txn_status := 'Success';
         ELSE
-            -- Mark the transaction as failed due to insufficient balance
+            -- Đánh dấu giao dịch thất bại do thiếu số dư
             txn_status := 'Failed';
         END IF;
 
-        -- Insert into history table for tracking
+        -- Ghi lịch sử giao dịch
         INSERT INTO history(
-            transaction_id, from_user_wallet, to_user_wallet, points_used, balance_before, balance_after, status
+            transaction_id, from_user_wallet, to_user_wallet, points_used, A_balance_before, A_balance_after, B_balance_before, B_balance_after, status
         )
         VALUES (
             Tcode_id, 
             A, 
             B, 
             d, 
-            balance_A,  -- Balance before the transaction
-            CASE WHEN txn_status = 'Success' THEN balance_A - d ELSE balance_A END,  -- Balance after transaction or unchanged
+            balance_A,  -- Số dư trước khi giao dịch
+            CASE WHEN txn_status = 'Success' THEN balance_A - d ELSE balance_A END,  -- Số dư sau khi giao dịch hoặc giữ nguyên
+            balance_B,  -- Số dư ban đầu của B
+            CASE WHEN txn_status = 'Success' THEN balance_B + d ELSE balance_B END, -- Số dư của B sau khi giao dịch hoặc giữ nguyên
             txn_status
         );
 
-        -- Return the appropriate message based on success or failure
+        -- Xác nhận giao dịch thành công
         IF txn_status = 'Success' THEN
             RETURN format('Giao dịch thành công.');
         ELSE
             RETURN 'Số dư tài khoản của bạn không đủ để thực hiện giao dịch.';
         END IF;
 
-    -- Exception handling block
+    -- Khối xử lý ngoại lệ
     EXCEPTION
         WHEN OTHERS THEN
-            -- Rollback and catch any errors and return a failure message
+            -- Hủy bỏ giao dịch nếu có lỗi
             RETURN format('Giao dịch bị hủy do lỗi: %s', SQLERRM);
     END;
+
+    -- Kết thúc giao dịch khi không có lỗi
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 
@@ -313,7 +341,7 @@ DROP TABLE totalpoints;
 DROP TABLE wallet;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
 DROP FUNCTION check_user(name VARCHAR(50));
-DROP FUNCTION transfer_log(wallet_id BIGINT);
+DROP FUNCTION transfer_log(p_wallet_id BIGINT, track_number BIGINT);
 DROP FUNCTION login(name_input VARCHAR(50));
 
 
@@ -335,8 +363,10 @@ UPDATE totalpoints SET pointout = pointout + 5000;
 INSERT INTO totalpoints(total) VALUES (50000);
 SELECT complex_transaction(1, 2, 50000);
 SELECT complex_transaction(1, 2, 2000);
+SELECT complex_transaction(2, 1, 1000);
 SELECT * FROM check_user('Long');
 SELECT * FROM check_user('Huy');
+SELECT * FROM transfer_log(2, 0);
 SELECT * FROM transfer_log(1, 0);
 SELECT * FROM login('Long');
 SELECT * FROM login('1');

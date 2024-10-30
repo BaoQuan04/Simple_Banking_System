@@ -4,7 +4,8 @@ CREATE TABLE accounts(
     urole VARCHAR(50) NOT NULL
 );
 CREATE TABLE admins(
-
+	adname VARCHAR(50) NOT NULL,
+	adpassword VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE users(
@@ -49,6 +50,7 @@ CREATE TABLE history(
 CREATE INDEX wallet_id_index ON Transacioncode(wallet_id);
 CREATE INDEX transaction_id_index ON history(transaction_id);
 CREATE INDEX uname_index ON users(uname);
+CREATE INDEX accname_index ON accounts(uname);
 
 
 -- don't know maybe delete
@@ -66,6 +68,39 @@ UPDATE userwithwallet SET ubalance = ubalance + history.points_transeferred WHER
 -- update pointout for each user created
 INSERT INTO users(uname, upassword, ) VALUES ();
 UPDATE totalpoints SET pointout = pointout + 5000;
+
+
+--check log in
+CREATE OR REPLACE FUNCTION login(name_input VARCHAR(50))
+RETURNS TABLE(name VARCHAR(50), upassword VARCHAR(50), wallet_id BIGINT, urole VARCHAR(50))
+LANGUAGE plpgsql AS $$
+DECLARE
+    user_role VARCHAR(50);  -- Đổi tên biến để tránh trùng với tên cột
+BEGIN
+    -- Kiểm tra xem có bản ghi nào khớp với name_input không
+    IF NOT EXISTS (
+        SELECT 1
+        FROM accounts AS a
+        WHERE a.uname = name_input
+    ) THEN
+        -- Nếu không có bản ghi nào khớp, trả về "0" cho tất cả các cột
+        RETURN QUERY SELECT '0'::VARCHAR, '0'::VARCHAR, 0::BIGINT, '0'::VARCHAR;
+    ELSE
+        -- Nếu tìm thấy bản ghi, lấy vai trò của người dùng
+        SELECT a.urole INTO user_role FROM accounts AS a WHERE a.uname = name_input;
+
+        -- Kiểm tra vai trò của người dùng
+        IF user_role = 'admin' THEN
+            RETURN QUERY SELECT name_input, '0'::VARCHAR, 0::BIGINT, user_role;
+        ELSE
+            RETURN QUERY 
+            SELECT u.uname, u.upassword, u.wallet_id, user_role
+            FROM users AS u
+            WHERE u.uname = name_input;
+        END IF;
+    END IF;
+END;
+$$;
 
 
 
@@ -151,23 +186,22 @@ $$ LANGUAGE plpgsql;
 
 
 -- check username exist in SQL for logging or transfer
-CREATE OR REPLACE FUNCTION check_user(name VARCHAR(50))
-RETURNS TABLE(wallet_id BIGINT) AS $$
+CREATE OR REPLACE FUNCTION check_user(name_input VARCHAR(50))
+RETURNS TABLE(name VARCHAR(50), wallet_id BIGINT) AS $$
 BEGIN
-    -- Attempt to find the wallet_id
+    -- Thử tìm tên và wallet_id của người dùng
     RETURN QUERY
-    SELECT u.wallet_id
+    SELECT u.uname, u.wallet_id
     FROM users u
-    WHERE u.uname = name;
+    WHERE u.uname = name_input;
 
-    -- If no result is found, it will return NULL by default.
-
-EXCEPTION
-    WHEN OTHERS THEN
-        -- Catch any errors and return NULL in case of failure
-        RETURN QUERY SELECT NULL;
+    -- Nếu không tìm thấy, trả về mặc định '0' và 0
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT '0'::VARCHAR, 0::BIGINT;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 
@@ -263,7 +297,8 @@ $$ LANGUAGE plpgsql;
 
 
 -- show data in table
-
+SELECT * FROM accounts;
+SELECT * FROM admins;
 SELECT * FROM users;
 SELECT * FROM Transactioncode;
 SELECT * FROM history;
@@ -279,6 +314,7 @@ DROP TABLE wallet;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
 DROP FUNCTION check_user(name VARCHAR(50));
 DROP FUNCTION transfer_log(wallet_id BIGINT);
+DROP FUNCTION login(name_input VARCHAR(50));
 
 
 -- clear data in table
@@ -288,6 +324,10 @@ TRUNCATE Transactioncode;
 
 
 -- test case
+INSERT INTO admins(adname, adpassword) VALUES ('1', '321');
+INSERT INTO accounts(uname, urole) VALUES ('1', 'admin');
+INSERT INTO accounts(uname, urole) VALUES ('Quan', 'user');
+INSERT INTO accounts(uname, urole) VALUES ('Huy', 'user');
 SELECT create_user('Quan');
 UPDATE totalpoints SET pointout = pointout + 5000;
 SELECT create_user('Huy')
@@ -295,10 +335,11 @@ UPDATE totalpoints SET pointout = pointout + 5000;
 INSERT INTO totalpoints(total) VALUES (50000);
 SELECT complex_transaction(1, 2, 50000);
 SELECT complex_transaction(1, 2, 2000);
-SELECT check_user('Long');
-SELECT check_user('Huy');
+SELECT * FROM check_user('Long');
+SELECT * FROM check_user('Huy');
 SELECT * FROM transfer_log(1, 0);
-
+SELECT * FROM login('Long');
+SELECT * FROM login('1');
 SELECT check_total();
 
 

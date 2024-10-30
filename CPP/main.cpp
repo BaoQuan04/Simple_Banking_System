@@ -63,7 +63,6 @@ void createMenu(){
 }
 
 void DangKyofUser(){
-   
     while(1){
         cout << "=========DANG KY TAI KHOAN==========\n";
        cout << "Nhap ten dang nhap: " ;
@@ -117,10 +116,10 @@ void DangKyofUser(){
            cin.ignore(); // Để bỏ qua ký tự '\n' trong buffer
 
            if (choice == 1) {
-               DangKyofUser(); // Thử lại đăng ký
+               continue;
            } else if (choice == 2) {
-               //chuyển tới hàm Đăng nhập
                DangNhapofUser();
+               return;
            } else {
                cout << "Lua chon khong hop le!" << endl;
            }
@@ -299,7 +298,6 @@ int DangNhapofAdmin(){
                 return 1;
             }
         }
-        cout << "Ten dang nhap hoac mat khau khong dung! Vui long thu lai.\n";
         cnt++;
         if(cnt == 3){
             cout << "Ban da nhap sai qua so lan quy dinh.\n";
@@ -312,15 +310,15 @@ int DangNhapofAdmin(){
 }
 
 void ChucNangUser(string a){
-    for(int i = 0;i < account.size(); i++){
-        if(account[i].getUsername() == a){
-            if(account[i].getTen() == ""){
-                account[i].capnhapThongTin();
-                cout << "Cap nhap thong tin thanh cong.\n";
-            }  
-        }
-    }
-    
+//    for(int i = 0;i < account.size(); i++){
+//        if(account[i].getUsername() == a){
+//            if(account[i].getTen() == ""){
+//                account[i].capnhapThongTin();
+//                cout << "Cap nhap thong tin thanh cong.\n";
+//            }  
+//        }
+//    }
+//    
     while(1){
         cout << "=============USER=============\n";
         cout << "Cac chuc nang:\n";
@@ -347,7 +345,9 @@ void quanlyVi(string a){
     for(i=0;i<account.size();i++){
         if(account[i].getUsername() == a ) break;
     }
-    if(!total.Check_Wallet(account[i])){
+    
+    string res = account[i].getmaDinhDanh();
+    if(res == ""){
         total.AddPoint(account[i]);
         total.addwallet(account[i]);
     }
@@ -361,7 +361,7 @@ void quanlyVi(string a){
         int choice;
         cin >> choice ;
         if(choice == 1) total.Check_Balance(account[i]);
-        else if(choice == 2) total.Chuyen_Diem(account[i]);
+        else if(choice == 2) total.Chuyen_Diem(a);
         else if(choice == 3) total.Check_history(account[i]);
         else return;
     }

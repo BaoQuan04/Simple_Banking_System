@@ -5,13 +5,13 @@ CREATE TABLE accounts(
 );
 CREATE TABLE admins(
 	adname VARCHAR(50) NOT NULL,
-	adpassword VARCHAR(50) NOT NULL
+	adpassword NUMERIC NOT NULL
 );
 
 CREATE TABLE users(
     user_id BIGSERIAL PRIMARY KEY,
     uname VARCHAR(50) UNIQUE NOT NULL,
-    upassword VARCHAR(50) DEFAULT '1',
+    upassword NUMERIC NOT NUll,
     wallet_id BIGINT REFERENCES wallet(wallet_id)
 	--birth_date,
 	--CCCD BIGINT UNIQUE,
@@ -75,26 +75,33 @@ UPDATE totalpoints SET pointout = pointout + 5000;
 
 --check log in
 CREATE OR REPLACE FUNCTION login(name_input VARCHAR(50))
-RETURNS TABLE(name VARCHAR(50), upassword VARCHAR(50), wallet_id BIGINT, urole VARCHAR(50))
-LANGUAGE plpgsql AS $$
+RETURNS TABLE(
+    uname VARCHAR(50), 
+    upassword NUMERIC, 
+    wallet_id BIGINT, 
+    urole VARCHAR(50)
+) LANGUAGE plpgsql AS $$
 DECLARE
-    user_role VARCHAR(50);  -- Đổi tên biến để tránh trùng với tên cột
+    user_role VARCHAR(50);  -- Biến lưu vai trò của người dùng
 BEGIN
-    -- Kiểm tra xem có bản ghi nào khớp với name_input không
+    -- Kiểm tra xem có bản ghi nào trong bảng accounts khớp với name_input không
     IF NOT EXISTS (
         SELECT 1
         FROM accounts AS a
         WHERE a.uname = name_input
     ) THEN
         -- Nếu không có bản ghi nào khớp, trả về "0" cho tất cả các cột
-        RETURN QUERY SELECT '0'::VARCHAR, '0'::VARCHAR, 0::BIGINT, '0'::VARCHAR;
+        RETURN QUERY SELECT '0'::VARCHAR(50), 0::NUMERIC, 0::BIGINT, '0'::VARCHAR(50);
     ELSE
-        -- Nếu tìm thấy bản ghi, lấy vai trò của người dùng
+        -- Nếu tìm thấy bản ghi, lấy vai trò của người dùng từ bảng accounts
         SELECT a.urole INTO user_role FROM accounts AS a WHERE a.uname = name_input;
 
-        -- Kiểm tra vai trò của người dùng
+        -- Dựa vào vai trò người dùng, trả về dữ liệu từ bảng admin hoặc users
         IF user_role = 'admin' THEN
-            RETURN QUERY SELECT name_input, '0'::VARCHAR, 0::BIGINT, user_role;
+            RETURN QUERY 
+            SELECT ad.adname, ad.adpassword, 0::BIGINT, user_role
+            FROM admins AS ad
+            WHERE ad.adname = name_input;
         ELSE
             RETURN QUERY 
             SELECT u.uname, u.upassword, u.wallet_id, user_role
@@ -107,19 +114,26 @@ $$;
 
 
 
--- update user info
-CREATE OR REPLACE update_uinfo()
-RETURN TEXT AS $$
-BEGIN
-	UPDATE users SET upassword = new_upassword;
-	UPDATE .......
 
-	RETURN 'Cập nhật thành công';
-END;
+
+
+-- update user info
+CREATE OR REPLACE FUNCTION update_uinfo(input_wallet_id BIGINT, new_upassword NUMERIC)
+RETURNS TEXT AS $$
+BEGIN
+    -- Thực hiện cập nhật
+    UPDATE users 
+    SET upassword = new_upassword 
+    WHERE wallet_id = input_wallet_id;
+
+    RETURN 'Cap nhat thanh cong';
 EXCEPTION
-    -- Catch any errors and return a failure message
+    -- Bắt lỗi và trả về thông báo lỗi
     WHEN OTHERS THEN
-        RETURN format('Cập nhật thất bại: %s', SQLERRM);
+        RETURN format('Cap nhat that bai: %s', SQLERRM);
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- show list of user
 
@@ -141,10 +155,10 @@ BEGIN
     SELECT 
         h.date_excute AS "Ngay thuc hien",
         
-        -- Xác định nội dung dựa trên cột `from_user_wallet` hoặc `to_user_wallet`
+        -- Xác định nội dung và in ra tên ví thay vì wallet_id
         CASE 
-            WHEN h.from_user_wallet = p_wallet_id THEN 'Chuyen diem den ' || h.to_user_wallet
-            ELSE 'Nhan diem tu ' || h.from_user_wallet
+            WHEN h.from_user_wallet = p_wallet_id THEN 'Chuyen diem den ' || COALESCE(u_to.uname, 'Khong ro')
+            ELSE 'Nhan diem tu ' || COALESCE(u_from.uname, 'Khong ro')
         END AS "Noi dung",
         
         h.points_used AS "Diem su dung",
@@ -164,7 +178,9 @@ BEGIN
         h.status::TEXT AS "Trang thai giao dich"
     FROM history h
     INNER JOIN Transactioncode t ON h.transaction_id = t.transaction_id
-    WHERE t.from_wallet_id = p_wallet_id or t.to_wallet_id = p_wallet_id
+    LEFT JOIN users u_from ON h.from_user_wallet = u_from.wallet_id
+    LEFT JOIN users u_to ON h.to_user_wallet = u_to.wallet_id
+    WHERE t.from_wallet_id = p_wallet_id OR t.to_wallet_id = p_wallet_id
     ORDER BY h.date_excute DESC
     LIMIT 5
     OFFSET track_number;
@@ -229,7 +245,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- create user account
-CREATE OR REPLACE FUNCTION create_user(uname VARCHAR(50), upassword VARCHAR(50) DEFAULT '1', value NUMERIC DEFAULT 5000)
+CREATE OR REPLACE FUNCTION create_user(uname VARCHAR(50), upassword NUMERIC, value NUMERIC DEFAULT 5000)
 RETURNS TEXT AS $$
 DECLARE
     uwallet_id BIGINT;
@@ -237,18 +253,20 @@ BEGIN
     -- Insert a new wallet with the specified balance
     INSERT INTO wallet(balance) VALUES(value)
     RETURNING wallet_id INTO uwallet_id;
+	
+	INSERT INTO accounts(uname, urole) VALUES (uname, 'user');
 
     -- Insert a new user with the generated wallet_id and update pointout
     INSERT INTO users(uname, upassword, wallet_id) VALUES(uname, upassword, uwallet_id);
 	UPDATE totalpoints SET pointout = pointout + 5000;
 
     -- Return success message
-    RETURN 'Tạo tài khoản thành công';
+    RETURN 'Tao tai khoan thanh cong';
 
 EXCEPTION
     -- Catch any errors and return a failure message
     WHEN OTHERS THEN
-        RETURN format('Tạo tài khoản thất bại: %s', SQLERRM);
+        RETURN format('Da xay ra loi vui long thu lai: %s', SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -305,16 +323,16 @@ BEGIN
 
         -- Xác nhận giao dịch thành công
         IF txn_status = 'Success' THEN
-            RETURN format('Giao dịch thành công.');
+            RETURN format('Giao dich thanh cong.');
         ELSE
-            RETURN 'Số dư tài khoản của bạn không đủ để thực hiện giao dịch.';
+            RETURN 'So du tai khoan cua ban khong du de thuc hien giao dich.';
         END IF;
 
     -- Khối xử lý ngoại lệ
     EXCEPTION
         WHEN OTHERS THEN
             -- Hủy bỏ giao dịch nếu có lỗi
-            RETURN format('Giao dịch bị hủy do lỗi: %s', SQLERRM);
+            RETURN format('Giao dich bi huy do loi: %s', SQLERRM);
     END;
 
     -- Kết thúc giao dịch khi không có lỗi
@@ -339,24 +357,30 @@ DROP TABLE Transactioncode;
 DROP TABLE history;
 DROP TABLE totalpoints;
 DROP TABLE wallet;
+DROP TABLE accounts;
+DROP TABLE admins;
 DROP FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT);
 DROP FUNCTION check_user(name VARCHAR(50));
 DROP FUNCTION transfer_log(p_wallet_id BIGINT, track_number BIGINT);
 DROP FUNCTION login(name_input VARCHAR(50));
+DROP FUNCTION update_uinfo(bigint,numeric);
 
 
 -- clear data in table
 TRUNCATE history;
 TRUNCATE users;
 TRUNCATE Transactioncode;
+TRUNCATE accounts;
+TRUNCATE admins;
 
 
 -- test case
-INSERT INTO admins(adname, adpassword) VALUES ('1', '321');
-INSERT INTO accounts(uname, urole) VALUES ('1', 'admin');
+INSERT INTO admins(adname, adpassword) VALUES ('Quan', '2185');
+INSERT INTO accounts(uname, urole) VALUES ('Quan', 'admin');
 INSERT INTO accounts(uname, urole) VALUES ('Quan', 'user');
 INSERT INTO accounts(uname, urole) VALUES ('Huy', 'user');
 SELECT create_user('Quan');
+SELECT create_user('Duy', 1);
 UPDATE totalpoints SET pointout = pointout + 5000;
 SELECT create_user('Huy')
 UPDATE totalpoints SET pointout = pointout + 5000;
@@ -369,7 +393,11 @@ SELECT * FROM check_user('Huy');
 SELECT * FROM transfer_log(2, 0);
 SELECT * FROM transfer_log(1, 0);
 SELECT * FROM login('Long');
-SELECT * FROM login('1');
+SELECT * FROM login('Quan');
 SELECT check_total();
+SELECT * FROM check_user('Dang');
 
+SELECT specific_schema,routine_name, routine_type
+FROM information_schema.routines
+where specific_schema ='Schema_name'
 

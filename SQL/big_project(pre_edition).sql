@@ -195,7 +195,7 @@ BEGIN
     LEFT JOIN users u_to ON h.to_user_wallet = u_to.wallet_id
     WHERE 
         (h.from_user_wallet = p_wallet_id)  -- Luôn hiển thị nếu người dùng là người gửi
-        OR (h.to_user_wallet = p_wallet_id)  -- Hiển thị khi là người nhận 
+        OR (h.to_user_wallet = p_wallet_id AND h.status = 'Success')  -- Hiển thị khi là người nhận và trạng thái giao dịch 'thành công'
     ORDER BY h.date_excute DESC
     LIMIT 5
     OFFSET track_number;
@@ -310,54 +310,63 @@ DECLARE
     balance_A BIGINT;
     balance_B BIGINT;
     Tcode_id BIGINT;
+    txn_status VARCHAR(50);
 BEGIN
-    -- Lấy số dư ví của A và B
-    SELECT balance INTO balance_A FROM wallet WHERE wallet_id = A;
-    SELECT balance INTO balance_B FROM wallet WHERE wallet_id = B;
-
-    -- Kiểm tra nếu số dư của A đủ cho giao dịch
-    IF balance_A < d THEN
-        -- Trả về lỗi và không thực hiện giao dịch nếu số dư không đủ
-        RETURN 'So du tai khoan khong du de thuc hien giao dich.';
-    END IF;
-
     -- Bắt đầu một giao dịch lớn
     BEGIN
-        -- Tạo transaction_id khi bắt đầu giao dịch
+        -- Lấy số dư ví của A và B
+        SELECT balance INTO balance_A FROM wallet WHERE wallet_id = A;
+        SELECT balance INTO balance_B FROM wallet WHERE wallet_id = B;
+
+        -- Tạo transaction_id cho dù giao dịch thành công hay thất bại
         INSERT INTO Transactioncode(from_wallet_id, to_wallet_id)
         VALUES (A, B)
         RETURNING transaction_id INTO Tcode_id;
 
-        -- Cập nhật số dư cho ví A và B
-        UPDATE wallet SET balance = balance - d WHERE wallet_id = A;
-        UPDATE wallet SET balance = balance + d WHERE wallet_id = B;
+        -- Kiểm tra nếu số dư của A đủ cho giao dịch
+        IF balance_A >= d THEN
+            -- Cập nhật số dư cho ví A và B
+            UPDATE wallet SET balance = balance - d WHERE wallet_id = A;
+            UPDATE wallet SET balance = balance + d WHERE wallet_id = B;
 
-        -- Ghi vào bảng lịch sử giao dịch
+            -- Đánh dấu giao dịch thành công
+            txn_status := 'Success';
+        ELSE
+            -- Đánh dấu giao dịch thất bại do thiếu số dư
+            txn_status := 'Failed';
+        END IF;
+
+        -- Ghi lịch sử giao dịch
         INSERT INTO history(
-            transaction_id, from_user_wallet, to_user_wallet, points_used, 
-            A_balance_before, A_balance_after, B_balance_before, B_balance_after, status
+            transaction_id, from_user_wallet, to_user_wallet, points_used, A_balance_before, A_balance_after, B_balance_before, B_balance_after, status
         )
         VALUES (
             Tcode_id, 
             A, 
             B, 
             d, 
-            balance_A,                -- Số dư trước khi giao dịch của A
-            balance_A - d,            -- Số dư sau khi giao dịch của A
-            balance_B,                -- Số dư trước khi giao dịch của B
-            balance_B + d,            -- Số dư sau khi giao dịch của B
-            'Success'                 -- Đánh dấu giao dịch thành công
+            balance_A,  -- Số dư trước khi giao dịch
+            CASE WHEN txn_status = 'Success' THEN balance_A - d ELSE balance_A END,  -- Số dư sau khi giao dịch hoặc giữ nguyên
+            balance_B,  -- Số dư ban đầu của B
+            CASE WHEN txn_status = 'Success' THEN balance_B + d ELSE balance_B END, -- Số dư của B sau khi giao dịch hoặc giữ nguyên
+            txn_status
         );
 
         -- Xác nhận giao dịch thành công
-        RETURN 'Giao dich thanh cong.';
+        IF txn_status = 'Success' THEN
+            RETURN format('Giao dich thanh cong.');
+        ELSE
+            RETURN 'So du tai khoan cua ban khong du de thuc hien giao dich.';
+        END IF;
 
+    -- Khối xử lý ngoại lệ
     EXCEPTION
         WHEN OTHERS THEN
-            -- Hủy bỏ giao dịch nếu có lỗi và trả về thông báo lỗi
+            -- Hủy bỏ giao dịch nếu có lỗi
             RETURN format('Giao dich bi huy do loi: %s', SQLERRM);
     END;
 
+    -- Kết thúc giao dịch khi không có lỗi
 END;
 $$ LANGUAGE plpgsql;
 

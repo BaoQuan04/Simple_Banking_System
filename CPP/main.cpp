@@ -9,7 +9,7 @@
 #include<map>
 #include <libpq-fe.h>
 #include <cstdlib> 
-#include "User.cpp"
+#include "user.cpp"
 using ull = unsigned long long;
 using namespace std;
 
@@ -159,6 +159,7 @@ void DangKyofUser(PGconn *conn){
             query = "SELECT * FROM create_user('" + sdt + "',"+ to_string(en_password1) +");";
             PGresult *exct = PQexec(conn, query.c_str());
             cout << PQgetvalue(exct, 0, 0) << endl;
+            cout << endl;
             PQclear(exct);
             return;
         }
@@ -282,7 +283,7 @@ void DangNhapofUser(PGconn *conn){
             else {
                 cout << "Xin chao "<< uname << "\n";
                 cout << endl;
-                ChucNangUser(conn, wallet_id, en_password, utelephone, en_mk);
+                ChucNangUser(conn, wallet_id, utelephone, en_mk);
                 }
             PQclear(res); // Giải phóng kết quả truy vấn sau khi sử dụng
             break;  // Thoát khỏi vòng lặp sau khi đăng nhập thành công
@@ -294,22 +295,30 @@ void DangNhapofUser(PGconn *conn){
             PQclear(res); // Giải phóng kết quả truy vấn trước khi thoát
             break;
         }
-
-        // Hiển thị lựa chọn tiếp tục
-        cout << "1. Thu lai.\n";
-        cout << "0. Thoat!\n";
-        int choice;
-        cout << "Chon chuc nang: ";
-        cin >> choice;
-        cin.ignore();
-        cout << endl;
-        if (choice == 0) {
-            cout << "Dang nhap khong thanh cong!\n";
-            PQclear(res); // Giải phóng kết quả truy vấn trước khi thoát
-            break;
-        }
-
         PQclear(res); // Giải phóng bộ nhớ sau mỗi lần dùng `res`
+        // Hiển thị lựa chọn tiếp tục
+        while (1)
+        {
+            cout << "1. Thu lai.\n";
+            cout << "2. Quay lai.\n";
+            int choice;
+            cout << "Chon chuc nang: ";
+            cin >> choice;
+            cin.ignore();
+            cout << endl;
+            if (choice == 2) {
+                cout << "Dang nhap khong thanh cong!\n";
+                cout << endl;
+                return;
+                }
+            else if (choice == 1)
+            {
+                break;
+            }
+            else {
+                cout << "Lua chon khong hop le. Vui long thu lai !\n";
+            }
+        } 
     }
     createMenuSaiDangNhap(conn);
     return;
@@ -343,7 +352,7 @@ void DangKyofAdmin(PGconn *conn){
         if (sdt == utelephone) mk = 1;
         if(mk == 1){
            int choice;
-           cout << "--------Ten dang nhap da ton tai--------." << endl;
+           cout << "--------Sdt da ton tai--------." << endl;
            cout << "1. Thu lai (Retry)" << endl;
            cout << "2. Dang nhap (Login)" << endl;
            cout << "3. Thoat" << endl; 
@@ -371,13 +380,26 @@ void DangKyofAdmin(PGconn *conn){
     }
 }
 
-void ChucNangUser(PGconn *conn, int wallet_id, ull en_password, string utelephone, ull en_mk){
-    string new_password1, new_password2, uname, en_uname;
-    ull en_newpassword1, en_newpassword2;
+void ChucNangUser(PGconn *conn, int wallet_id,string utelephone, ull en_mk){
+    string query;
+    query = "SELECT first_login FROM users WHERE wallet_id = "+ to_string(wallet_id)  +";";
+    PGresult *res = PQexec(conn, query.c_str());
+    string first_login = PQgetvalue(res, 0, 0);
+    PQclear(res);
+    if (first_login == "1" and en_mk == 49) {
+        User().capnhapThongTin(conn, wallet_id, 1);
+        query = "UPDATE users SET first_login = 0 WHERE wallet_id = "+ to_string(wallet_id) +";";
+        PGresult *ext = PQexec(conn, query.c_str());
+        PQclear(ext);
+    }
+    else if (first_login == "1")
+    {
+        User().capnhapThongTin(conn, wallet_id, 0);
+        query = "UPDATE users SET first_login = 0 WHERE wallet_id = "+ to_string(wallet_id) +";";
+        PGresult *changes = PQexec(conn, query.c_str());
+        PQclear(changes);
+    }
     
-    if (en_password == 49) {
-        User().capnhapThongTin(conn, wallet_id);
-        }
 
     while(1){
         cout << "=============USER=============\n";
@@ -476,7 +498,7 @@ void ChucNangAdmin(PGconn *conn){
 
 int main(){
     // Chuỗi kết nối tới PostgreSQL
-    const char* conninfo = "dbname=******* user=postgres password=***** hostaddr=****** port=5432";
+    const char* conninfo = "dbname=***** user=**** password=**** hostaddr=**** port=****";
     
     // Kết nối với PostgreSQL
     PGconn *conn = PQconnectdb(conninfo);

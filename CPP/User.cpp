@@ -29,10 +29,9 @@ ull getHash(string);
 void DangKyofUser(PGconn *conn);
 void DangKyofAdmin();
 void DangNhapofUser(PGconn *conn);
-int DangNhapofAdmin();
 void createMenuSaiDangNhap();
 //=================
-void ChucNangUser(PGconn *conn, int wallet_id, ull en_password, string utelephone, ull en_mk);
+void ChucNangUser(PGconn *conn, int wallet_id, string utelephone, ull en_mk);
 void quanlyVi(PGconn *conn, int wallet_id);
 void suaThongTinofUser(PGconn *conn, int wallet_id);
 void suaMatKhauofUser(PGconn *conn, int wallet_id);
@@ -65,10 +64,6 @@ class User{
 		string DiaChi;
 		string Email;
 
-
-
-
-
     public :
 
         //bool createOTP();
@@ -100,7 +95,7 @@ class User{
 
 
 		//---------------------Nhap suat sua thong tin user------------------
-		void capnhapThongTin(PGconn *conn, int wallet_id);
+		void capnhapThongTin(PGconn *conn, int wallet_id, int update_pass);
 		void xuatThongTin();
         void menuSuaThongTin(PGconn *conn, int wallet_id);
 		void SuaTen(PGconn *conn, int wallet_id);
@@ -303,7 +298,7 @@ bool TotalWallet::Check_Wallet(string ma){
 
 bool TotalWallet::Chuyen_Diem(PGconn *conn,int wallet_id){
     string v1, query;
-    int d, v2;
+    int d, v2, balance;
 
     cout << "Nhap ma vi ma ban muon chuyen tien : ";
     cin >> v2;
@@ -329,8 +324,29 @@ bool TotalWallet::Chuyen_Diem(PGconn *conn,int wallet_id){
         cout << "Vi chu va vi dich phai khac nhau !" << endl;
         return false;
     };
+
+
     cout << "Nhap so tien ban muon chuyen cho vi dich : "; 
     cin >> d;
+    query = "SELECT * FROM check_user_balance('" + to_string(wallet_id) + "');";
+    PGresult *exct = PQexec(conn, query.c_str());
+    balance = stoi(PQgetvalue(exct, 0, 0));
+    if (PQresultStatus(exct) != PGRES_TUPLES_OK) {
+        cerr << "Query failed: " << PQerrorMessage(conn) << endl;
+        PQclear(exct);
+        PQfinish(conn);
+        system("pause");
+        return false;
+    }
+    PQclear(exct);
+    if (balance < d)
+    {
+        cout << "So du cua ban khong du de thuc hien giao dich !\n";
+        return false;
+    }
+    
+
+
     if(!createOTP()) return false;
     query = "SELECT complex_transaction("+ to_string(wallet_id) +","+ uwallet_id +","+ to_string(d) +");";
     PGresult *exac = PQexec(conn, query.c_str());
@@ -341,9 +357,8 @@ bool TotalWallet::Chuyen_Diem(PGconn *conn,int wallet_id){
         PQclear(exac);
         return false;
     }
-    
     cout << PQgetvalue(exac, 0, 0) << endl;
-    PQclear(exac);
+    cout << endl;
     return true;
 }
 
@@ -359,24 +374,90 @@ void TotalWallet::Check_Balance(PGconn *conn,int wallet_id){
 }
 
 void TotalWallet::Check_history(PGconn *conn,int wallet_id){
+    int count_rows;
+    int count_index = 0;
     string query;
-    query = "SELECT * FROM transfer_log(" + to_string(wallet_id) + ", 0);";
+    query = "SELECT COUNT(transaction_id) FROM Transactioncode Tr WHERE Tr.from_wallet_id = "+to_string(wallet_id)+" OR Tr.to_wallet_id = "+to_string(wallet_id)+";";
+    PGresult *exec = PQexec(conn, query.c_str());
+    string resu = PQgetvalue(exec, 0, 0);
+    if (resu == "0")
+    {
+        cout <<"Ban chua thuc hien giao dich nao ca!";
+        cout << endl;
+        PQclear(exec);
+        return;
+    }
+    count_rows = stoi(resu);
+    PQclear(exec);
+    
+    if (resu.empty())
+    {
+        cout <<"Ban chua thuc hien giao dich nao ca !\n";
+        cout << endl;
+        return;
+    }
+    
+    
+    while(count_rows > 0){
+    if (count_rows <= 5)
+    {
+        query = "SELECT * FROM transfer_log(" + to_string(wallet_id) + ", "+to_string(count_index)+");";
+        PGresult *res = PQexec(conn, query.c_str());
+
+        int rows = PQntuples(res);
+        int cols = PQnfields(res);
+
+        // Hiển thị dữ liệu từng hàng theo dạng dọc
+        for (int i = 0; i < rows; i++) {
+            cout << "Giao dich " << count_index + i + 1 << ":\n";
+            for (int j = 0; j < cols; j++) {
+                cout << setw(25) << left << PQfname(res, j) << ": " << PQgetvalue(res, i, j) << endl;
+            }
+            cout << string(50, '-') << endl;
+        }
+        PQclear(res);
+        return;
+    }
+    query = "SELECT * FROM transfer_log(" + to_string(wallet_id) + ", "+to_string(count_index)+");";
     PGresult *res = PQexec(conn, query.c_str());
 
     int rows = PQntuples(res);
     int cols = PQnfields(res);
 
-    // Duyệt qua từng hàng dữ liệu
-    for (int i = 0; i < rows; i++) {
-        cout << "" << i + 1 << ":\n";
-        // In từng cột theo hàng dọc
-        for (int j = 0; j < cols; j++) {
-            cout << setw(25) << left << PQfname(res, j) << ": " << PQgetvalue(res, i, j) << endl;
+    // Hiển thị dữ liệu từng hàng theo dạng dọc
+        for (int i = 0; i < rows; i++) {
+            cout << "Giao dich " << count_index + i + 1 << ":\n";
+            for (int j = 0; j < cols; j++) {
+                cout << setw(25) << left << PQfname(res, j) << ": " << PQgetvalue(res, i, j) << endl;
+            }
+            cout << string(50, '-') << endl;
         }
-        cout << string(50, '-') << endl;  // Dòng phân cách giữa các hàng
+        PQclear(res);
+    while (1)
+        {   
+            cout << "Co muon xem tiep ?\n";
+            cout << "1. Tiep tuc\n";
+            cout << "2. Quay lai.\n";
+            int choice;
+            cout << "Chon chuc nang: ";
+            cin >> choice;
+            cin.ignore();
+            cout << endl;
+            if (choice == 2) {
+                cout << endl;
+                return;
+                }
+            else if (choice == 1)
+            {
+                break;
+            }
+            else {
+                cout << "Lua chon khong hop le. Vui long thu lai !\n";
+            }
+        }
+    count_rows -= 5;
+    count_index += 5;
     }
-    PQclear(res);
-    return;
 }
 
 //------------------------Ham kiem tra----------------------------------------
@@ -485,7 +566,7 @@ bool User::Check_Email(string& a){
         return true;
 }
 
-void User::capnhapThongTin(PGconn *conn, int wallet_id){
+void User::capnhapThongTin(PGconn *conn, int wallet_id, int update_pass){
     cout << "CAP NHAP THONG TIN USER !" << endl;
    
 //----------Nhap Ten-------------
@@ -494,9 +575,11 @@ void User::capnhapThongTin(PGconn *conn, int wallet_id){
     getline(cin, name);
     name = ChuanHoa_Ten(name);
 
+
 //----------Nhap mat khau-------------
-    string new_password1, new_password2, query;
+    string new_password1, new_password2;
     ull en_newpassword1, en_newpassword2;
+    if (update_pass == 1) { //check thu xem da nhap mat khau cho lan dau chua
     while (true) {
             cout << "Nhap mat khau moi: ";
             cin >> new_password1;
@@ -528,7 +611,7 @@ void User::capnhapThongTin(PGconn *conn, int wallet_id){
                 return;
             }
         }
-
+    }
 //---------Nhap Ngay sinh------
     string birth;
     cout << "Nhap ngay sinh (Vi du: 01/01/2000) :" ;
@@ -568,23 +651,38 @@ void User::capnhapThongTin(PGconn *conn, int wallet_id){
     }
     
     int check = createOTP();
-    if(check == true){
-        string query;
-        query = "SELECT * FROM update_uinfo("+ to_string(wallet_id) +",'"+ name +"', "+to_string(en_newpassword1)+", '"+ birth +"', '"+ Email +"','"+sex+"');";
-        PGresult *res = PQexec(conn, query.c_str());
+    if (check) {
+    string query;
 
-        // Kiểm tra kết quả truy vấn
-        if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-            cerr << "Query failed: " << PQerrorMessage(conn) << endl;
-            PQclear(res);
-            system("pause");
-            return;
-        }
-        cout << PQgetvalue(res, 0, 0) << endl;
-        PQclear(res);
+    if (new_password1.empty()) {
+        // Nếu mật khẩu mới rỗng, thiết lập NULL cho trường mật khẩu
+        query = "SELECT * FROM update_uinfo(" + to_string(wallet_id) + ", '" + 
+                name + "', NULL, '" + birth + "', '" + Email + "', '" + sex + "');";
+    } else {
+        // Nếu có mật khẩu mới, chuyển đổi mật khẩu mã hóa thành chuỗi và thêm vào truy vấn
+        query = "SELECT * FROM update_uinfo(" + to_string(wallet_id) + ", '" + 
+                name + "', " + to_string(en_newpassword1) + ", '" + birth + "', '" + 
+                Email + "', '" + sex + "');";
     }
-    cout << endl;
-    return;
+
+    // Thực thi truy vấn
+    PGresult *res = PQexec(conn, query.c_str());
+
+    // Kiểm tra kết quả truy vấn
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        cerr << "Query failed: " << PQerrorMessage(conn) << endl;
+        PQclear(res);
+        system("pause");
+        return;
+    }
+
+    // In kết quả trả về
+    cout << PQgetvalue(res, 0, 0) << endl;
+    PQclear(res);
+}
+cout << endl;
+return;
+
 }
 
 void User::xuatThongTin(){
@@ -615,7 +713,7 @@ void User::menuSuaThongTin(PGconn *conn, int wallet_id){
         cin.ignore();
         cout << endl;
         if(a == 1){
-            capnhapThongTin(conn, wallet_id);
+            capnhapThongTin(conn, wallet_id, 0);
         }
         else if(a == 2) SuaTen(conn, wallet_id);
         else if(a == 3) suaMatKhau(conn, wallet_id);
@@ -682,20 +780,31 @@ void User::SuaNgaySinh(PGconn *conn, int wallet_id){
 }
 
 void User::SuaGioiTinh(PGconn *conn, int wallet_id){
-    string a;
+    string sex;
     cout << "Nhap gioi tinh (Nam hoac Nu) :" ;
-    cin >> a;
-    if(!Check_GioiTinh(a)){
+    cin >> sex;
+    if(!Check_GioiTinh(sex)){
         do{
             cout << "Gioi tinh khong hop le! Vui long nhap lai :" ;
-            cin >> a;
-        }while(!Check_GioiTinh(a));
+            cin >> sex;
+        }while(!Check_GioiTinh(sex));
     }
-    a = ChuanHoa_GioiTinh(a);
+    sex = ChuanHoa_GioiTinh(sex);
     int check =createOTP();
     if(check == true){
-        this->GioiTinh = a;
-        cout << "Thay doi thong tin thanh cong.\n";
+        string query;
+        query = "SELECT * FROM update_uinfo("+ to_string(wallet_id) +", NULL, NULL, NULL, NULL, '"+ sex +"');";
+        PGresult *res = PQexec(conn, query.c_str());
+        // Kiểm tra kết quả truy vấn
+        if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+            cerr << "Query failed: " << PQerrorMessage(conn) << endl;
+            PQclear(res);
+            system("pause");
+            return;
+        }
+        cout << PQgetvalue(res, 0, 0) << endl;
+        cout << endl;
+        PQclear(res);
     }
     else return;
 }
@@ -876,13 +985,13 @@ ull getHash(string mk){
 
 void xemThongTin(PGconn *conn, int wallet_id){
     string query;
-    query = "SELECT utelephone, uname, birth_date, email, sex, wallet_id FROM users WHERE wallet_id = "+ to_string(wallet_id) + ";";
+    query = "SELECT uname, utelephone, birth_date, email, sex, wallet_id FROM users WHERE wallet_id = "+ to_string(wallet_id) + ";";
     PGresult *res = PQexec(conn, query.c_str());
 
 
     // In tên các cột
-    cout<<"So dien thoai: " << PQgetvalue(res, 0, 0) << endl;
-    cout<<"Ten nguoi dung: " << PQgetvalue(res, 0, 1) << endl;
+    cout<<"Ten nguoi dung: " << PQgetvalue(res, 0, 0) << endl;
+    cout<<"So dien thoai: " << PQgetvalue(res, 0, 1) << endl;
     cout<<"Ngay sinh: " << PQgetvalue(res, 0, 2) << endl;
     cout<<"Email: " << PQgetvalue(res, 0, 3) << endl;
     cout<<"Gioi tinh: " << PQgetvalue(res, 0, 4) << endl;
@@ -972,7 +1081,7 @@ void suaMatKhauofUser(PGconn *conn, int wallet_id, ull en_mk){
 void quanlyKhachHang(PGconn *conn){
     cout << "Danh sach khach hang:\n";
     string query;
-    query = "SELECT utelephone, uname, wallet_id FROM users;";
+    query = "SELECT utelephone, uname, wallet_id FROM users ORDER BY wallet_id ASC;";
     PGresult *res = PQexec(conn, query.c_str());
 
     int rows = PQntuples(res);

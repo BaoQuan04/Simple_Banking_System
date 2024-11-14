@@ -1,8 +1,9 @@
 -- create table
 CREATE TABLE accounts(
-    utelephone VARCHAR(50) UNIQUE NOT NULL,
+    acctelephone VARCHAR(50) UNIQUE NOT NULL,
     urole VARCHAR(50) NOT NULL
 );
+
 CREATE TABLE admins(
 	adname VARCHAR(50) NOT NULL,
 	adpassword NUMERIC NOT NULL
@@ -16,7 +17,8 @@ CREATE TABLE users(
 	birth_date VARCHAR(50),
 	Email VARCHAR(50),
 	sex VARCHAR(50),
-	wallet_id BIGINT REFERENCES wallet(wallet_id)
+	wallet_id BIGINT REFERENCES wallet(wallet_id),
+	first_login NUMERIC DEFAULT 0
 );
 
 CREATE TABLE totalpoints(
@@ -36,6 +38,13 @@ CREATE TABLE wallet(
 	balance BIGINT NOT NULL
 );
 
+SELECT nextval('wallet_wallet_id_seq');
+SELECT nextval('users_user_id_seq');
+SELECT currval('wallet_wallet_id_seq'::regclass);
+SELECT currval('users_user_id_seq'::regclass);
+
+
+
 CREATE TABLE history(
     transaction_id BIGINT NOT NULL REFERENCES Transactioncode(transaction_id),
 	from_user_wallet BIGINT NOT NULL REFERENCES wallet(wallet_id),
@@ -49,24 +58,16 @@ CREATE TABLE history(
 	status VARCHAR(50) NOT NULL
 );
 
+
 -- modify for best performance
-CREATE INDEX wallet_id_index ON Transacioncode(wallet_id);
-CREATE INDEX transaction_id_index ON history(transaction_id);
+CREATE INDEX from_wallet_id_index ON Transactioncode(from_wallet_id);
+CREATE INDEX to_wallet_id_index ON Transactioncode(to_wallet_id);
+CREATE INDEX TR_transaction_id_index ON Transactioncode(transaction_id);
 CREATE INDEX utelephone_index ON users(utelephone);
-CREATE INDEX accname_index ON accounts(uname);
-CREATE INDEX 
+CREATE INDEX accname_index ON accounts(acctelephone);
+CREATE INDEX uwallet_id_index ON users(wallet_id);
+CREATE INDEX HT_transaction_id_index ON history(transaction_id);
 
-
--- don't know maybe delete
-SELECT urole FROM users WHERE uname = '' /*check uname exist in SQL when logging*/
-SELECT * FROM users LIMIT 5 ORDER BY ASC; /*print 5 roll from beginning of users table*/ 
-
-
-INSERT INTO users(uname, urole) values ('', ''); /*add user or admin to control in system */
-INSERT INTO userwithwallet(uname, upassword, upoints) values ();/* add user info */
-INSERT INTO history(user_id, from_user, to_user, points_transferred, ubalance) values(); /*add history for tracking*/
-UPDATE userwithwallet SET ubalance = ubalance - history.points_transeferred WHERE userwithwallet.user_id = history.user_id; /*update sender's balance*/
-UPDATE userwithwallet SET ubalance = ubalance + history.points_transeferred WHERE userwithwallet.uname = history.to_user; /* update receiver's balance */
 
 
 -- update pointout for each user created
@@ -90,13 +91,13 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM accounts AS a
-        WHERE a.utelephone = telephone_input
+        WHERE a.acctelephone = telephone_input
     ) THEN
         -- Nếu không có bản ghi nào khớp, trả về "0" cho tất cả các cột
         RETURN QUERY SELECT '0'::VARCHAR(50), '0'::VARCHAR(50), 0::NUMERIC, 0::BIGINT, '0'::VARCHAR(50);
     ELSE
         -- Nếu tìm thấy bản ghi, lấy vai trò của người dùng từ bảng accounts
-        SELECT a.urole INTO user_role FROM accounts AS a WHERE a.utelephone = telephone_input;
+        SELECT a.urole INTO user_role FROM accounts AS a WHERE a.acctelephone = telephone_input;
 
         -- Dựa vào vai trò người dùng, trả về dữ liệu từ bảng admin hoặc users
         IF user_role = 'admin' THEN
@@ -234,7 +235,7 @@ BEGIN
 EXCEPTION
    	WHEN OTHERS THEN
     	-- Catch any errors and return a failure message
-        RETURN format('Đã xảy ra lỗi', SQLERRM);
+        RETURN format('Da xay ra loi: ', SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -276,7 +277,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- create user account
-CREATE OR REPLACE FUNCTION create_user(utelephone VARCHAR(50), upassword NUMERIC, value NUMERIC DEFAULT 5000)
+CREATE OR REPLACE FUNCTION create_user(input_telephone VARCHAR(50), upassword NUMERIC, value NUMERIC DEFAULT 5000)
 RETURNS TEXT AS $$
 DECLARE
     uwallet_id BIGINT;
@@ -285,12 +286,14 @@ BEGIN
     INSERT INTO wallet(balance) VALUES(value)
     RETURNING wallet_id INTO uwallet_id;
 	
-	INSERT INTO accounts(utelephone, urole) VALUES (utelephone, 'user');
+	INSERT INTO accounts(acctelephone, urole) VALUES (input_telephone, 'user');
 
     -- Insert a new user with the generated wallet_id and update pointout
-    INSERT INTO users(utelephone, upassword, wallet_id) VALUES(utelephone, upassword, uwallet_id);
+    INSERT INTO users(utelephone, upassword, wallet_id) VALUES(input_telephone, upassword, uwallet_id);
 	UPDATE totalpoints SET pointout = pointout + 5000;
-
+	
+	-- identify first login
+	UPDATE users SET first_login = 1 WHERE users.utelephone = input_telephone;
     -- Return success message
     RETURN 'Tao tai khoan thanh cong';
 
@@ -302,6 +305,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+--Kiểm tra số tiền trước khi chuyển điểm
+CREATE OR REPLACE FUNCTION check_user_balance(input_wallet_id BIGINT)
+RETURNS TABLE(ubalance BIGINT) AS $$
+BEGIN
+	RETURN QUERY
+	SELECT balance FROM wallet WHERE wallet.wallet_id = input_wallet_id;
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- transfer and catch exceptions
 CREATE OR REPLACE FUNCTION complex_transaction(A BIGINT, B BIGINT, d BIGINT)
@@ -310,63 +322,75 @@ DECLARE
     balance_A BIGINT;
     balance_B BIGINT;
     Tcode_id BIGINT;
-    txn_status VARCHAR(50);
 BEGIN
-    -- Bắt đầu một giao dịch lớn
-    BEGIN
-        -- Lấy số dư ví của A và B
+    
+		-- Kiểm tra số dư trước khi giao dịch
         SELECT balance INTO balance_A FROM wallet WHERE wallet_id = A;
-        SELECT balance INTO balance_B FROM wallet WHERE wallet_id = B;
-
-        -- Tạo transaction_id cho dù giao dịch thành công hay thất bại
-        INSERT INTO Transactioncode(from_wallet_id, to_wallet_id)
+     
+		
+		-- Lấy số dư ví của B
+       	SELECT balance INTO balance_B FROM wallet WHERE wallet_id = B;
+		
+        -- Tạo transaction_id 
+		INSERT INTO Transactioncode(from_wallet_id, to_wallet_id)
         VALUES (A, B)
         RETURNING transaction_id INTO Tcode_id;
-
-        -- Kiểm tra nếu số dư của A đủ cho giao dịch
-        IF balance_A >= d THEN
+			
+		-- bắt đầu giao dịch
+		BEGIN
+			
             -- Cập nhật số dư cho ví A và B
             UPDATE wallet SET balance = balance - d WHERE wallet_id = A;
             UPDATE wallet SET balance = balance + d WHERE wallet_id = B;
-
-            -- Đánh dấu giao dịch thành công
-            txn_status := 'Success';
-        ELSE
-            -- Đánh dấu giao dịch thất bại do thiếu số dư
-            txn_status := 'Failed';
-        END IF;
-
-        -- Ghi lịch sử giao dịch
-        INSERT INTO history(
+			
+			
+			-- Ghi vào history
+			INSERT INTO history(
             transaction_id, from_user_wallet, to_user_wallet, points_used, A_balance_before, A_balance_after, B_balance_before, B_balance_after, status
-        )
-        VALUES (
-            Tcode_id, 
-            A, 
-            B, 
-            d, 
-            balance_A,  -- Số dư trước khi giao dịch
-            CASE WHEN txn_status = 'Success' THEN balance_A - d ELSE balance_A END,  -- Số dư sau khi giao dịch hoặc giữ nguyên
-            balance_B,  -- Số dư ban đầu của B
-            CASE WHEN txn_status = 'Success' THEN balance_B + d ELSE balance_B END, -- Số dư của B sau khi giao dịch hoặc giữ nguyên
-            txn_status
-        );
-
-        -- Xác nhận giao dịch thành công
-        IF txn_status = 'Success' THEN
-            RETURN format('Giao dich thanh cong.');
-        ELSE
-            RETURN 'So du tai khoan cua ban khong du de thuc hien giao dich.';
-        END IF;
+        	)
+        	VALUES (
+            	Tcode_id, 
+            	A, 
+            	B, 
+            	d, 
+            	balance_A,  -- Số dư của A trước khi giao dịch
+            	balance_A - d,  -- Số dư của A sau khi giao dịch thành công
+            	balance_B,  -- Số dư ban đầu của B
+            	balance_B + d, -- Số dư của B sau khi giao dịch thành công
+            	'Success'
+        	);
+			RETURN format('Giao dich thanh cong.');
+           
 
     -- Khối xử lý ngoại lệ
     EXCEPTION
         WHEN OTHERS THEN
-            -- Hủy bỏ giao dịch nếu có lỗi
-            RETURN format('Giao dich bi huy do loi: %s', SQLERRM);
-    END;
-
-    -- Kết thúc giao dịch khi không có lỗi
+			-- Nếu gặp lỗi vẫn sẽ khi vào trong history và transaction
+			BEGIN
+				INSERT INTO Transactioncode(from_wallet_id, to_wallet_id)
+        		VALUES (A, B)
+        		RETURNING transaction_id INTO Tcode_id;
+				INSERT INTO history(
+            	transaction_id, from_user_wallet, to_user_wallet, points_used, A_balance_before, A_balance_after, B_balance_before, B_balance_after, status
+        		)
+        		VALUES (
+            		Tcode_id, 
+            		A, 
+            		B, 
+            		d, 
+            		balance_A,  -- Số dư ban đầu của A
+            		balance_A,  -- Số dư của A sau khi giao dịch thất bại
+            		balance_B,  -- Số dư ban đầu của B
+            		balance_B, 	-- Số dư của B sau khi giao dịch thất bại
+            		'Failed'
+        		);
+				EXCEPTION
+                WHEN OTHERS THEN
+                    -- Nếu gặp lỗi thì dừng lại, không in ra lỗi
+                    NULL;
+            END;
+            RETURN format('Giao dich bi huy !');
+		END;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -408,7 +432,7 @@ TRUNCATE admins;
 
 -- test case
 INSERT INTO admins(adname, adpassword) VALUES ('Quan', '2185');
-INSERT INTO accounts(utelephone, urole) VALUES ('Quan', 'admin');
+INSERT INTO accounts(acctelephone, urole) VALUES ('Quan', 'admin');
 INSERT INTO accounts(uname, urole) VALUES ('Quan', 'user');
 INSERT INTO accounts(uname, urole) VALUES ('Huy', 'user');
 SELECT create_user('0905191495', 49);
@@ -430,8 +454,6 @@ SELECT check_total();
 SELECT * FROM check_user('Dang');
 SELECT * FROM check_wallet_id(2);
 SELECT * FROM update_uinfo(1, NULL, NULL, NULL, 'Nu');
-						   
-SELECT specific_schema,routine_name, routine_type
-FROM information_schema.routines
-where specific_schema ='Schema_name'
+SELECT INDEX FROM
+						  
 

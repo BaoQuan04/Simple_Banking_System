@@ -44,20 +44,19 @@ void createMenu(PGconn *conn){
 
 void DangKyofUser(PGconn *conn){
    
-   string sdt;
+    string sdt,password1, password2;
+    cout << "=========DANG KY TAI KHOAN==========\n";
     while(1){
-        cout << "=========DANG KY TAI KHOAN==========\n";
-        while (1)
-        {
         cout << "Nhap sdt: " ;
         getline(cin, sdt);
         if(User().Check_Sdt(sdt)) break;
         else {
-        while(1) {   
-                cout << "So dien thoat khong hop le. Vui long thu lai !\n";
+            cout << "So dien thoat khong hop le. Vui long thu lai !\n";
+            while (1){
                 cout << "1. Thu lai.\n";
-                cout << "0. Thoat!\n";
+                cout << "0. Quay lai.\n";
                 int chk ;
+                cout << "Chon chuc nang: " ;
                 cin >> chk;
                 cin.ignore();
                 if(chk == 0){
@@ -65,48 +64,61 @@ void DangKyofUser(PGconn *conn){
                     cout << endl;
                     return;
                 }
-                else if (chk == 1) break;
+                else if (chk == 1) {
+                    cout << endl;
+                    break;
+                }
                 else {
-                    cout << "Lua chon khong hop le !\n";
+                    cout << "Lua chon khong hop le .Vui long nhap lai!\n";
                     cout << endl;
                     continue;}
             }
-       }
-       }
-       
-       string password1, password2;
+        }
+    }
+    int mk = 0;
+    string query;
+    query = "SELECT * FROM check_user('" + sdt + "');";
+    PGresult *res = PQexec(conn, query.c_str());
+    string utelephone = PQgetvalue(res, 0, 0);
+    PQclear(res);
+    if (sdt == utelephone) mk = 1;
+    if(mk == 1){
+        cout << "--------Sdt da ton tai--------." << endl;
+        while (1) {
+             int choice;
+             cout << "1. Thu lai (Retry)" << endl;
+             cout << "2. Dang nhap (Login)" << endl;
+             cout << "3. Thoat" << endl; 
+             cout << "Chon chuc nang: " ;
+                cin >> choice;
+             cin.ignore(); // Để bỏ qua ký tự '\n' trong buffer
+             cout << endl;
+              if (choice == 1) {
+                 DangKyofUser(conn); // Thử lại đăng ký
+             } 
+            else if (choice == 2) {
+            //chuyển tới hàm Đăng nhập
+                DangNhapofUser(conn);
+            }
+            else if (choice == 3) return ;
+            else {
+                cout << "Lua chon khong hop le!" << endl;
+                cout << endl;
+            }
+        }
+    }
+
+    while (1) {
        cout << "Nhap mat khau: ";
        cin >> password1;
        cout << "Nhap lai mat khau: ";
        cin >> password2;
        cin.ignore();
        if (password1 != password2) {
-           while(1) {
-                cout << "Mat khau khong khop. Vui long thu lai !" << endl;   
-                cout << "1. Thu lai.\n";
-                cout << "0. Thoat!\n";
-                int chk ;
-                cout << "Chon chuc nang: ";
-                cin >> chk;
-                cin.ignore();
-                cout << endl;
-                if(chk == 0){
-                    cout << "Dang ky khong thanh cong!\n";
-                    cout << endl;
-                    return;
-                }
-                else if (chk == 1) break;
-                else {
-                    cout << "Lua chon khong hop le !\n";
-                    cout << endl;
-                    continue;}
-            }
-       }
-       if (sdt == "" || password1 == ""){
+            cout << "Mat khau khong khop. Vui long thu lai !" << endl; 
             while(1) {
-                cout << "Sdt hoac mat khau khong duoc de trong." << endl;   
                 cout << "1. Thu lai.\n";
-                cout << "0. Thoat!\n";
+                cout << "0. Quay lai.\n";
                 int chk ;
                 cout << "Chon chuc nang: ";
                 cin >> chk;
@@ -117,54 +129,53 @@ void DangKyofUser(PGconn *conn){
                     cout << endl;
                     return;
                 }
-                else if (chk == 1) break;
+                else if (chk == 1) {
+                    cout << endl;
+                    break;
+                }
                 else {
                     cout << "Lua chon khong hop le !\n";
                     cout << endl;
-                    continue;}
+                    continue;
+                }
             }
        }
-        int mk = 0;
-        string query;
-        query = "SELECT * FROM check_user('" + sdt + "');";
-        PGresult *res = PQexec(conn, query.c_str());
-        string utelephone = PQgetvalue(res, 0, 0);
-        PQclear(res);
-        if (sdt == utelephone) mk = 1;
-        if(mk == 1){
-            int choice;
-            cout << "--------Sdt da ton tai--------." << endl;
-            cout << "1. Thu lai (Retry)" << endl;
-            cout << "2. Dang nhap (Login)" << endl;
-            cout << "3. Thoat" << endl; 
-            cout << "Chon chuc nang: " ;
-            cin >> choice;
-            cin.ignore(); // Để bỏ qua ký tự '\n' trong buffer
-            cout << endl;
-            if (choice == 1) {
-               DangKyofUser(conn); // Thử lại đăng ký
-           } else if (choice == 2) {
-               //chuyển tới hàm Đăng nhập
-               DangNhapofUser(conn);
-               }
-            else if (choice == 3) return ;
-            else {
-               cout << "Lua chon khong hop le!" << endl;
-               cout << endl;
-           }
+       else if (sdt == "" || password1 == "")
+       {
+            cout << "Sdt hoac mat khau khong duoc de trong." << endl;   
+            while(1) {
+                cout << "1. Thu lai.\n";
+                cout << "0. Quay lai.\n";
+                int chk ;
+                cout << "Chon chuc nang: ";
+                cin >> chk;
+                cin.ignore();
+                cout << endl;
+                if(chk == 0){
+                    cout << "Dang ky khong thanh cong!\n";
+                    cout << endl;
+                    return;
+                }
+                else if (chk == 1) {
+                    cout << endl;
+                    break;
+                }
+                else {
+                    cout << "Lua chon khong hop le !\n";
+                    cout << endl;
+                    continue;
+                }
+            }
        }
-        else{
-            ull en_password1 = getHash(password1);
-            string query;
-            query = "SELECT * FROM create_user('" + sdt + "',"+ to_string(en_password1) +");";
-            PGresult *exct = PQexec(conn, query.c_str());
-            cout << PQgetvalue(exct, 0, 0) << endl;
-            cout << endl;
-            PQclear(exct);
-            return;
-        }
+       else break;  
     }
-
+    ull en_password1 = getHash(password1);
+    query = "SELECT * FROM create_user('" + sdt + "',"+ to_string(en_password1) +");";
+    PGresult *exct = PQexec(conn, query.c_str());
+    cout << PQgetvalue(exct, 0, 0) << endl;
+    cout << endl;
+    PQclear(exct);
+    return;
 }
 
 
@@ -498,7 +509,7 @@ void ChucNangAdmin(PGconn *conn){
 
 int main(){
     // Chuỗi kết nối tới PostgreSQL
-    const char* conninfo = "dbname=***** user=**** password=**** hostaddr=**** port=****";
+    const char* conninfo = "dbname=***** user=***** password=***** hostaddr=***** port=*****";
     
     // Kết nối với PostgreSQL
     PGconn *conn = PQconnectdb(conninfo);

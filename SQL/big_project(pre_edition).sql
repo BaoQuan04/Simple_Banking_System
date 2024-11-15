@@ -323,7 +323,7 @@ DECLARE
     balance_B BIGINT;
     Tcode_id BIGINT;
 BEGIN
-    
+     
 		-- Kiểm tra số dư trước khi giao dịch
         SELECT balance INTO balance_A FROM wallet WHERE wallet_id = A;
      
